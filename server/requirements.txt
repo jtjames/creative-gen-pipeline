@@ -1,4 +1,6 @@
-fastapi>=0.110,<1
-uvicorn[standard]>=0.24,<1
-dropbox>=11.36.0
-pydantic-settings>=2.0,<3
+fastapi==0.114.1
+uvicorn[standard]==0.30.3
+dropbox==11.36.2
+pydantic-settings==2.5.2
+pytest==7.4.4
+setuptools==75.1.0

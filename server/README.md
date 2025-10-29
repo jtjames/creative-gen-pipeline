@@ -1,11 +1,11 @@
 # Creative Automation API (Server)
 
-A minimal FastAPI server scaffold for the Creative Automation System. The server now integrates with Dropbox for artifact storage, mirroring the workflow that will eventually back creative uploads and reporting links.
+A minimal FastAPI server scaffold for the Creative Automation System. The server now integrates with Dropbox for artifact storage, mirroring the workflow that will eventually back creative uploads and reporting links. Code style guidance: favor pure functional Python where practical; keep side effects localized to integration boundaries (HTTP handlers, storage adapters).
 
 ## Prerequisites
 - Python 3.10+
 - `pip` or another Python package manager
-- A Dropbox app access token with files.content.write/read scopes
+- A Dropbox app access token with files.metadata.read/write and files.content.read/write scopes
 
 ## Setup & Run
 ```bash
@@ -43,7 +43,7 @@ Environment variables (or `.env`) recognised by the server:
 - `TEMPORARY_LINK_TTL_SECONDS`: Desired lifetime for generated temporary links (Dropbox currently enforces a 4-hour maximum).
 
 ## Testing the Dropbox Connection
-A simple smoke test lives in `tests.py`. Run `python tests.py` to upload a small marker file and request a temporary link using your current configuration. Remove it once automated tests replace this script.
+Run `pytest tests_integration/test_dropbox_connection.py` to upload a temporary artifact, generate a download link, and clean up. The test skips itself if `DROPBOX_ACCESS_TOKEN` is not configured.
 
 ## Next Steps
 As additional agents are implemented, expand this server with `/api/generate` and `/api/report` endpoints and reuse the Dropbox helper to persist outputs and surface temporary download links.
