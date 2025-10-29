@@ -12,11 +12,11 @@ from pathlib import Path
 
 import pytest
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-ENV_FILE = PROJECT_ROOT / ".env"
+SERVER_ROOT = Path(__file__).resolve().parents[2]
+ENV_FILE = SERVER_ROOT / ".env"
 
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+if str(SERVER_ROOT) not in sys.path:
+    sys.path.insert(0, str(SERVER_ROOT))
 
 
 def _load_env_from_file() -> None:
