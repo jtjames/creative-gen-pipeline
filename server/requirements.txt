@@ -1,2 +1,4 @@
 fastapi>=0.110,<1
 uvicorn[standard]>=0.24,<1
+dropbox>=11.36.0
+pydantic-settings>=2.0,<3
