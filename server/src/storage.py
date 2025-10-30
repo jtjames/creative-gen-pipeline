@@ -74,6 +74,15 @@ class DropboxStorage:
             metadata, response = self._client.files_download(full_path)
             return response.content
         except ApiError as exc:
+            # Check if it's a "not found" error - log as debug instead of error
+            error = exc.error
+            if hasattr(error, 'is_path') and error.is_path():
+                path_error = error.get_path()
+                if hasattr(path_error, 'is_not_found') and path_error.is_not_found():
+                    logger.debug("File not found: %s", full_path)
+                    raise FileNotFoundError(f"File not found in Dropbox: {path}") from exc
+
+            # Other errors are logged as errors
             logger.error("Failed to download %s: %s", full_path, exc)
             raise RuntimeError(f"Unable to download file from Dropbox: {path}") from exc
 
@@ -136,6 +145,14 @@ class DropboxStorage:
         try:
             response = self._client.files_get_temporary_link(full_path)
         except ApiError as exc:
+            # Check if this is a not-found error
+            error = exc.error
+            if hasattr(error, 'is_path') and error.is_path():
+                path_error = error.get_path()
+                if hasattr(path_error, 'is_not_found') and path_error.is_not_found():
+                    logger.warning("File not found when creating temporary link: %s", full_path)
+                    raise FileNotFoundError(f"File not found in Dropbox: {path}") from exc
+
             logger.error("Failed to create temporary link for %s: %s", full_path, exc)
             raise RuntimeError("Unable to create temporary link") from exc
         return response.link

@@ -31,7 +31,7 @@ class BriefService:
             storage: Dropbox storage adapter for file operations
         """
         self.storage = storage
-        self.briefs_root = "/briefs"
+        self.briefs_root = "/briefs"  # Campaigns are stored under /briefs
 
     def upload_brief(
         self,
@@ -56,11 +56,10 @@ class BriefService:
         """
         campaign_id = brief.campaign
         campaign_folder = f"{self.briefs_root}/{campaign_id}"
-        assets_folder = f"{campaign_folder}/assets"
+        products_folder = f"{campaign_folder}/products"
 
-        # Ensure folders exist
+        # Ensure campaign folder exists
         self.storage.ensure_folder(campaign_folder)
-        self.storage.ensure_folder(assets_folder)
 
         def detect_image_extension(image_bytes: bytes, original_filename: Optional[str] = None) -> str:
             if image_bytes[:2] == b'\xff\xd8':
@@ -82,7 +81,9 @@ class BriefService:
                 image_bytes = provided_images[product_id]
                 ext = detect_image_extension(image_bytes)
 
-                image_path = f"{assets_folder}/{product_id}.{ext}"
+                # Store in products/{product-id}/1-1/{product-id}.ext
+                product_folder = f"{products_folder}/{product_id}/1-1"
+                image_path = f"{product_folder}/{product_id}.{ext}"
                 self.storage.upload_image(
                     path=image_path,
                     data=image_bytes,
@@ -98,9 +99,8 @@ class BriefService:
             original_filename, logo_bytes = brand_logo
             if logo_bytes:
                 ext = detect_image_extension(logo_bytes, original_filename)
-                base_name = Path(original_filename).stem or 'brand-logo'
-                sanitized_base = base_name.replace(' ', '-').replace('/', '-')
-                brand_logo_path = f"{assets_folder}/{sanitized_base}.{ext}"
+                # Store logo in campaign root as logo.ext
+                brand_logo_path = f"{campaign_folder}/logo.{ext}"
                 self.storage.upload_image(
                     path=brand_logo_path,
                     data=logo_bytes,
@@ -160,8 +160,15 @@ class BriefService:
             brief_data = json.loads(brief_json)
 
             return CampaignBrief(**brief_data)
+        except (FileNotFoundError, ValueError, json.JSONDecodeError):
+            # Brief not found or invalid - expected for non-campaign folders
+            return None
         except Exception:
-            # Brief not found or invalid
+            # Unexpected error - log it
+            import logging
+            logging.getLogger(__name__).warning(
+                "Unexpected error retrieving brief for campaign %s", campaign_id, exc_info=True
+            )
             return None
 
     def get_brief_metadata(self, campaign_id: str) -> Optional[BriefMetadata]:
@@ -182,7 +189,15 @@ class BriefService:
             metadata_data = json.loads(metadata_json)
 
             return BriefMetadata(**metadata_data)
+        except (FileNotFoundError, ValueError, json.JSONDecodeError):
+            # Metadata not found or invalid - expected for non-campaign folders
+            return None
         except Exception:
+            # Unexpected error - log it
+            import logging
+            logging.getLogger(__name__).warning(
+                "Unexpected error retrieving metadata for campaign %s", campaign_id, exc_info=True
+            )
             return None
 
     def list_briefs(self) -> List[BriefListItem]:
@@ -195,8 +210,9 @@ class BriefService:
         Raises:
             Exception: If listing fails
         """
-        # Ensure briefs root exists
-        self.storage.ensure_folder(self.briefs_root)
+        # Ensure briefs root exists (skip if empty - root always exists)
+        if self.briefs_root:
+            self.storage.ensure_folder(self.briefs_root)
 
         # List all campaign folders
         try:
@@ -206,9 +222,14 @@ class BriefService:
             return []
 
         # Filter for folders only (campaign IDs)
+        # When briefs_root is empty, campaigns are at /{campaign_id} (1 slash)
+        # When briefs_root is "/briefs", campaigns are at /briefs/{campaign_id} (2 slashes)
+        expected_slash_count = 1 if not self.briefs_root else 2
+        prefix = "/" if not self.briefs_root else f"{self.briefs_root}/"
+
         campaign_folders = [
             p for p in paths
-            if p.startswith(f"{self.briefs_root}/") and p.count("/") == 2
+            if p.startswith(prefix) and p.count("/") == expected_slash_count
         ]
 
         # Extract campaign IDs from folder paths

@@ -23,8 +23,6 @@ from .genai_providers import select_genai_client, GenAIClient
 from .config import Settings, get_settings
 from .assets import needs_generation
 from .generation_logs import GenerationLogService
-from .image_processing import overlay_logo_on_image
-from .logo_analysis import analyze_logo, create_logo_enhanced_prompt
 
 
 class OrchestratorAgent:
@@ -148,21 +146,17 @@ class OrchestratorAgent:
             genai_client = select_genai_client(self.settings)
 
         campaign_folder = f"/briefs/{campaign_id}"
-        assets_folder = f"{campaign_folder}/assets"
+        products_folder = f"{campaign_folder}/products"
 
-        # Download and analyze logo if available
+        # Download logo if available for use as reference image
         logo_bytes = None
-        logo_analysis = None
         if brief.brand and brief.brand.logo_path and not needs_generation(brief.brand.logo_path):
             try:
                 logo_bytes = self.storage.download_bytes(brief.brand.logo_path)
-                # Analyze logo to extract visual characteristics
-                logo_analysis = analyze_logo(logo_bytes)
-                print(f"Logo analysis: {logo_analysis['style_description']}")
-                print(f"Dominant colors: {[c for c, _ in logo_analysis['dominant_colors'][:3]]}")
+                print(f"Logo downloaded for image-to-image generation ({len(logo_bytes)} bytes)")
             except Exception as exc:
                 # Log warning but continue without logo
-                print(f"Warning: Could not download/analyze logo: {exc}")
+                print(f"Warning: Could not download logo: {exc}")
 
         generated_count = 0
 
@@ -170,9 +164,65 @@ class OrchestratorAgent:
         for product in brief.products:
             if needs_generation(product.image_path):
                 await self._generate_product_image(
-                    campaign_id, genai_client, product, assets_folder, logo_bytes, brief, logo_analysis
+                    campaign_id, genai_client, product, products_folder, logo_bytes, brief
                 )
                 generated_count += 1
+
+        # Generate aspect ratio variations for products that already have images
+        if brief.aspect_ratios and len(brief.aspect_ratios) > 0:
+            from .openai_image import OpenAIImageClient
+            openai_client = OpenAIImageClient(self.settings)
+
+            for product in brief.products:
+                # Skip products that don't have images yet
+                if needs_generation(product.image_path):
+                    continue
+
+                # Download the existing product image
+                try:
+                    existing_image_bytes = self.storage.download_bytes(product.image_path)
+                    print(f"Generating aspect ratio variations for existing product: {product.id}")
+
+                    # Build the same enhanced prompt that would be used for generation
+                    enhanced_prompt = product.prompt or f"Product image for {product.name}"
+
+                    # Add brand context if available
+                    if brief.brand:
+                        brand_context_parts = []
+                        if brief.brand.primary_hex:
+                            brand_context_parts.append(f"featuring brand color {brief.brand.primary_hex}")
+                        if logo_bytes:
+                            brand_context_parts.append(
+                                "incorporating the brand logo and visual identity, "
+                                "styled as an official branded product photograph"
+                            )
+                        if brand_context_parts:
+                            brand_context = ", " + ", ".join(brand_context_parts)
+                            enhanced_prompt = f"{enhanced_prompt}{brand_context}"
+
+                    # Add CTA if available
+                    if brief.cta:
+                        cta_text = brief.cta.get("en-US") or next(iter(brief.cta.values()), None)
+                        if cta_text:
+                            cta_instruction = (
+                                f". Include the call-to-action text '{cta_text}' prominently displayed "
+                                "in bold, modern typography at the bottom of the image with high contrast "
+                                "against the background for readability"
+                            )
+                            enhanced_prompt = f"{enhanced_prompt}{cta_instruction}"
+
+                    product_folder = f"{products_folder}/{product.id}"
+                    await self._generate_aspect_ratio_variations(
+                        campaign_id,
+                        product,
+                        enhanced_prompt,
+                        existing_image_bytes,
+                        brief.aspect_ratios,
+                        product_folder,
+                        logo_bytes
+                    )
+                except Exception as exc:
+                    print(f"Warning: Could not generate variations for {product.id}: {exc}")
 
         # Update the brief with new image paths
         brief_json = brief.model_dump_json(indent=2)
@@ -189,10 +239,9 @@ class OrchestratorAgent:
         campaign_id: str,
         genai_client: GenAIClient,
         product: Product,
-        assets_folder: str,
+        products_folder: str,
         logo_bytes: bytes | None = None,
         brief: CampaignBrief | None = None,
-        logo_analysis: dict | None = None,
     ) -> None:
         """
         Generate a single product image using GenAI.
@@ -201,10 +250,9 @@ class OrchestratorAgent:
             campaign_id: Campaign identifier
             genai_client: Configured GenAI image client
             product: Product to generate image for
-            assets_folder: Folder to store generated image
-            logo_bytes: Optional brand logo to overlay on the generated image
+            products_folder: Base products folder path
+            logo_bytes: Optional brand logo to use as reference image
             brief: Campaign brief containing brand information
-            logo_analysis: Analysis results from logo (colors, style, etc.)
 
         Raises:
             RuntimeError: If generation fails
@@ -228,29 +276,21 @@ class OrchestratorAgent:
 
             start_time = time.time()
 
-            # Enhance prompt with brand identity and logo analysis
+            # Build enhanced prompt with brand context and CTA
             enhanced_prompt = product.prompt
 
-            if logo_analysis:
-                # Use logo analysis to create highly detailed brand-aware prompt
-                # Pass has_reference_image=True since we're providing logo bytes to the model
-                enhanced_prompt = create_logo_enhanced_prompt(
-                    product.prompt,
-                    logo_analysis,
-                    has_reference_image=bool(logo_bytes)
-                )
-                print(f"Enhanced prompt for {product.id}: {enhanced_prompt[:150]}...")
-            elif brief and brief.brand:
-                # Fallback to basic brand information if logo analysis not available
-                brand_color = brief.brand.primary_hex
+            # Add brand context if available
+            if brief and brief.brand:
                 brand_context_parts = []
 
-                if brand_color:
-                    brand_context_parts.append(f"featuring brand color {brand_color}")
+                # Add brand color
+                if brief.brand.primary_hex:
+                    brand_context_parts.append(f"featuring brand color {brief.brand.primary_hex}")
 
+                # Add logo reference instruction if logo is provided
                 if logo_bytes:
                     brand_context_parts.append(
-                        "with subtle brand elements or logo visible on the product itself, "
+                        "incorporating the brand logo and visual identity shown in the reference image, "
                         "styled as an official branded product photograph"
                     )
 
@@ -280,38 +320,40 @@ class OrchestratorAgent:
                 reference_image_bytes=logo_bytes,  # Logo as visual reference
             )
 
-            # Composite logo on generated image if available
+            # Use the generated image directly (logo incorporated via Gemini reference image)
             final_image_bytes = artifact.image_bytes
-            if logo_bytes:
-                try:
-                    final_image_bytes = overlay_logo_on_image(
-                        product_image_bytes=artifact.image_bytes,
-                        logo_image_bytes=logo_bytes,
-                        logo_position="bottom-right",
-                        logo_scale=0.15,  # 15% of image width
-                        padding=30,
-                    )
-                except Exception as logo_exc:
-                    # Log warning but use image without logo
-                    print(f"Warning: Could not overlay logo on {product.id}: {logo_exc}")
-                    final_image_bytes = artifact.image_bytes
 
-            # Store generated image (with or without logo)
-            image_path = f"{assets_folder}/{product.id}-generated.png"
+            # Store base generated image in products/{product-id}/1-1/
+            product_folder = f"{products_folder}/{product.id}"
+            aspect_folder_1_1 = f"{product_folder}/1-1"
+            base_image_path = f"{aspect_folder_1_1}/{product.id}.png"
+
             self.storage.upload_image(
-                path=image_path,
+                path=base_image_path,
                 data=final_image_bytes,
             )
 
             # Update product image path
-            product.image_path = image_path
+            product.image_path = base_image_path
 
             duration = time.time() - start_time
 
             # Log generation completed
             self.log_service.log_generation_completed(
-                campaign_id, product, model_name, image_path, duration
+                campaign_id, product, model_name, base_image_path, duration
             )
+
+            # Generate additional aspect ratios using OpenAI
+            if brief and brief.aspect_ratios:
+                await self._generate_aspect_ratio_variations(
+                    campaign_id,
+                    product,
+                    enhanced_prompt,
+                    final_image_bytes,
+                    brief.aspect_ratios,
+                    product_folder,
+                    logo_bytes
+                )
 
         except Exception as exc:
             # Log generation failed
@@ -321,6 +363,67 @@ class OrchestratorAgent:
             raise RuntimeError(
                 f"Failed to generate image for product {product.id}: {str(exc)}"
             ) from exc
+
+    async def _generate_aspect_ratio_variations(
+        self,
+        campaign_id: str,
+        product: Product,
+        prompt: str,
+        base_image_bytes: bytes,
+        aspect_ratios: list[str],
+        product_folder: str,
+        logo_bytes: bytes | None = None,
+    ) -> None:
+        """
+        Generate images at different aspect ratios using OpenAI.
+
+        Args:
+            campaign_id: Campaign identifier
+            product: Product being generated
+            prompt: Enhanced prompt used for base generation
+            base_image_bytes: Base 1:1 image bytes
+            aspect_ratios: List of aspect ratios to generate (e.g., ["1:1", "9:16", "16:9"])
+            product_folder: Product-specific folder path (e.g., /campaign-id/products/product-id)
+            logo_bytes: Optional logo to overlay on generated images
+        """
+        from .openai_image import OpenAIImageClient
+
+        # Use OpenAI for aspect ratio variations
+        openai_client = OpenAIImageClient(self.settings)
+
+        for aspect_ratio in aspect_ratios:
+            # Skip 1:1 as it's already generated by Gemini
+            if aspect_ratio == "1:1":
+                continue
+
+            try:
+                print(f"Generating {aspect_ratio} variation for {product.id}")
+
+                # Generate image at target aspect ratio
+                artifact = await openai_client.generate_image(
+                    prompt=prompt,
+                    negative_prompt=product.negative_prompt,
+                    aspect_ratio=aspect_ratio,
+                )
+
+                # Use the generated image directly
+                final_image_bytes = artifact.image_bytes
+
+                # Store aspect ratio variation in products/{product-id}/{aspect-ratio}/
+                aspect_folder = aspect_ratio.replace(":", "-")  # 9:16 -> 9-16
+                aspect_folder_path = f"{product_folder}/{aspect_folder}"
+                variation_path = f"{aspect_folder_path}/{product.id}.png"
+
+                self.storage.upload_image(
+                    path=variation_path,
+                    data=final_image_bytes,
+                )
+
+                print(f"Generated {aspect_ratio} variation: {variation_path}")
+
+            except Exception as exc:
+                # Log warning but continue with other aspect ratios
+                print(f"Warning: Failed to generate {aspect_ratio} variation for {product.id}: {exc}")
 
 
 async def run_campaign_generation(

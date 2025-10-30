@@ -85,7 +85,7 @@ def _extract_dominant_colors(img: Image.Image, num_colors: int = 5) -> List[Tupl
     most_common = color_counts.most_common(num_colors * 2)
 
     # Filter similar colors and convert to hex
-    unique_colors = []
+    unique_colors = []  # Store (rgb_tuple, count) temporarily
     for rgb, count in most_common:
         # Check if this color is significantly different from already selected colors
         is_unique = True
@@ -95,16 +95,21 @@ def _extract_dominant_colors(img: Image.Image, num_colors: int = 5) -> List[Tupl
                 break
 
         if is_unique:
-            hex_color = _rgb_to_hex(rgb)
-            percentage = count / len(pixels)
-            unique_colors.append((hex_color, percentage))
+            unique_colors.append((rgb, count))
 
         if len(unique_colors) >= num_colors:
             break
 
+    # Convert to hex and calculate percentages
+    hex_colors = []
+    for rgb, count in unique_colors:
+        hex_color = _rgb_to_hex(rgb)
+        percentage = count / len(pixels)
+        hex_colors.append((hex_color, percentage))
+
     # Normalize percentages
-    total = sum(pct for _, pct in unique_colors)
-    normalized = [(color, pct / total) for color, pct in unique_colors]
+    total = sum(pct for _, pct in hex_colors)
+    normalized = [(color, pct / total) for color, pct in hex_colors]
 
     return normalized
 

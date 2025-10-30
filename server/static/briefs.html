@@ -141,7 +141,11 @@
             try {
                 const response = await fetch(`/storage/temporary-link?path=${encodeURIComponent(dropboxPath)}`);
                 if (!response.ok) {
-                    console.error(`Failed to get temporary link for ${dropboxPath}`);
+                    if (response.status === 404) {
+                        console.warn(`File not found in Dropbox: ${dropboxPath}`);
+                    } else {
+                        console.error(`Failed to get temporary link for ${dropboxPath}: ${response.status}`);
+                    }
                     return null;
                 }
                 const data = await response.json();
@@ -297,39 +301,50 @@
 
                 const brief = await response.json();
 
-                const productImageEntries = brief.products
+                const validProductImages = brief.products
+                    .filter(product => hasAssetPath(product.image_path))
                     .map(product => ({
                         id: product.id,
                         name: product.name,
                         path: product.image_path
-                    }))
-                    .filter(item => hasAssetPath(item.path))
-                    .slice(0, MAX_PRODUCT_IMAGES);
+                    }));
 
-                // Fetch temporary links for all product images
-                const productImagesWithLinks = await Promise.all(
-                    productImageEntries.map(async (entry) => {
-                        const tempLink = await getTemporaryLink(entry.path);
-                        return { ...entry, tempLink };
+                const uniqueProductImagePaths = [...new Set(validProductImages.map(item => item.path))];
+
+                const productImageLinkMap = {};
+                await Promise.all(
+                    uniqueProductImagePaths.map(async (path) => {
+                        const tempLink = await getTemporaryLink(path);
+                        if (tempLink) {
+                            productImageLinkMap[path] = tempLink;
+                        }
                     })
                 );
 
-                const productImagesMarkup = productImagesWithLinks
-                    .filter(entry => entry.tempLink) // Only show images that have valid links
-                    .map(({ id, name, tempLink }) => {
-                        const label = name || id || 'Product';
-                        const caption = name && id ? `${name} (${id})` : label;
-                        return `
-                            <figure class="mb-0 text-center">
-                                <div class="ratio ratio-1x1 rounded border bg-white shadow-sm overflow-hidden" style="width: 140px; cursor: pointer;" title="Double-click to view full size">
-                                    <img src="${escapeHtml(tempLink)}" alt="${escapeHtml(label)} image" class="object-fit-cover w-100 h-100 product-detail-img" loading="lazy" data-image-src="${escapeHtml(tempLink)}" data-image-title="${escapeHtml(label)}">
-                                </div>
-                                <figcaption class="small text-secondary mt-2 text-truncate" title="${escapeHtml(caption)}">${escapeHtml(label)}</figcaption>
-                            </figure>
-                        `;
-                    }).join('');
+                const productPreviewEntries = validProductImages
+                    .slice(0, MAX_PRODUCT_IMAGES)
+                    .map(entry => ({
+                        ...entry,
+                        tempLink: productImageLinkMap[entry.path]
+                    }))
+                    .filter(entry => !!entry.tempLink);
 
-                const productImagesSection = productImageEntries.length ? `
+                const productImagesMarkup = productPreviewEntries.map(({ id, name, tempLink }) => {
+                    const rawLabel = name || id || 'Product';
+                    const label = escapeHtml(rawLabel);
+                    const caption = escapeHtml(name && id ? `${name} (${id})` : rawLabel);
+                    const safeLink = escapeHtml(tempLink);
+                    return `
+                        <figure class="mb-0 text-center">
+                            <div class="ratio ratio-1x1 rounded border bg-white shadow-sm overflow-hidden" style="width: 140px; cursor: pointer;" title="Double-click to view full size">
+                                <img src="${safeLink}" alt="${label} image" class="object-fit-cover w-100 h-100 product-detail-img" loading="lazy" data-image-src="${safeLink}" data-image-title="${label}">
+                            </div>
+                            <figcaption class="small text-secondary mt-2 text-truncate" title="${caption}">${label}</figcaption>
+                        </figure>
+                    `;
+                }).join('');
+
+                const productImagesSection = productPreviewEntries.length ? `
                     <section class="mb-4">
                         <h3 class="h6 text-uppercase text-secondary fw-semibold">Product Images</h3>
                         <div class="d-flex flex-wrap gap-3">
@@ -340,58 +355,116 @@
 
                 const logoPath = brief.brand && brief.brand.logo_path;
                 const hasLogoImage = hasAssetPath(logoPath);
-
-                // Fetch temporary link for logo if it exists
                 const logoTempLink = hasLogoImage ? await getTemporaryLink(logoPath) : null;
+                const logoDisplayValue = logoPath ? escapeHtml(logoPath) : 'Not provided';
 
-                // Only show logo section if there's a valid logo image
                 const brandLogoMarkup = logoTempLink
                     ? `
                         <div class="ms-auto d-flex flex-column align-items-start">
                             <div class="small text-secondary">Logo</div>
                             <img src="${escapeHtml(logoTempLink)}" alt="Brand logo" class="rounded border bg-white shadow-sm brand-logo-img" style="max-height: 64px; width: auto; cursor: pointer;" loading="lazy" data-image-src="${escapeHtml(logoTempLink)}" data-image-title="Brand Logo" title="Double-click to view full size">
+                            <div class="small text-muted mt-2 text-break">${logoDisplayValue}</div>
                         </div>
                     `
-                    : '';
+                    : logoPath
+                        ? `
+                            <div class="ms-auto d-flex flex-column align-items-start">
+                                <div class="small text-secondary">Logo</div>
+                                <div class="small text-muted text-break">${logoDisplayValue}</div>
+                            </div>
+                        `
+                        : '';
+
+                const brandColors = [
+                    { label: 'Primary', value: brief.brand?.primary_hex },
+                    { label: 'Secondary', value: brief.brand?.secondary_hex }
+                ].filter(color => !!color.value);
+
+                const brandColorMarkup = brandColors.map(({ label, value }) => {
+                    const safeValue = escapeHtml(value);
+                    const safeLabel = escapeHtml(label);
+                    return `
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle" style="width: 32px; height: 32px; background:${safeValue}; border:1px solid rgba(15,23,42,0.1);"></div>
+                            <div>
+                                <div class="small text-secondary">${safeLabel} Hex</div>
+                                <div class="fw-semibold">${safeValue}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('') || '<div class="small text-muted">No brand colors provided</div>';
 
                 document.getElementById('modalTitle').textContent = `Campaign: ${formatCampaignName(brief.campaign)}`;
 
-                const localizedMessages = brief.locales.map(locale => `
+                const localizedMessages = brief.locales.map(locale => {
+                    const localeKey = escapeHtml(locale);
+                    const messageCopy = brief.message?.[locale] ?? '';
+                    const ctaCopy = brief.cta?.[locale] ?? '';
+                    return `
                     <div class="mb-3">
-                        <h4 class="h6 text-primary mb-2">${locale}</h4>
-                        <p class="mb-1"><strong>Message:</strong> ${brief.message[locale]}</p>
-                        <p class="mb-0"><strong>CTA:</strong> ${brief.cta[locale]}</p>
+                        <h4 class="h6 text-primary mb-2">${localeKey}</h4>
+                        <p class="mb-1"><strong>Message:</strong> ${escapeHtml(messageCopy)}</p>
+                        <p class="mb-0"><strong>CTA:</strong> ${escapeHtml(ctaCopy)}</p>
                     </div>
-                `).join('');
+                `;
+                }).join('');
 
-                const productList = brief.products.map(product => `
+                const productList = brief.products.map(product => {
+                    const safeName = escapeHtml(product.name);
+                    const safeId = escapeHtml(product.id);
+                    const safePrompt = escapeHtml(product.prompt);
+                    const negativePrompt = product.negative_prompt ? escapeHtml(product.negative_prompt) : null;
+                    const imagePathValue = product.image_path ?? '';
+                    const safeImagePath = imagePathValue ? escapeHtml(imagePathValue) : 'Not provided';
+                    const productHasImage = hasAssetPath(imagePathValue);
+                    const tempLink = productHasImage ? productImageLinkMap[imagePathValue] : null;
+                    const imagePreviewMarkup = tempLink
+                        ? `
+                            <div class="mt-3">
+                                <div class="small text-secondary mb-2">Image Preview</div>
+                                <div class="ratio ratio-1x1 rounded border bg-white shadow-sm overflow-hidden" style="max-width: 200px; cursor: pointer;" title="Double-click to view full size">
+                                    <img src="${escapeHtml(tempLink)}" alt="${safeName} image" class="object-fit-cover w-100 h-100 product-detail-img" loading="lazy" data-image-src="${escapeHtml(tempLink)}" data-image-title="${safeName}">
+                                </div>
+                                <div class="small text-muted mt-2 text-break">${safeImagePath}</div>
+                            </div>
+                        `
+                        : productHasImage
+                            ? `<div class="small text-muted mt-2 text-break"><strong>Image Path:</strong> ${safeImagePath}</div>`
+                            : `<div class="small text-muted mt-2 text-break"><strong>Image:</strong> ${safeImagePath}</div>`;
+
+                    return `
                     <div class="border rounded-3 p-3 mb-3 bg-body-tertiary">
-                        <div class="fw-semibold">${product.name} <span class="text-secondary">(${product.id})</span></div>
-                        <div class="small text-secondary mt-2"><strong>Prompt:</strong> ${product.prompt}</div>
-                        ${product.negative_prompt ? `<div class="small text-secondary mt-1"><strong>Negative:</strong> ${product.negative_prompt}</div>` : ''}
-                        <div class="small text-muted mt-2"><strong>Image:</strong> ${product.image_path}</div>
+                        <div class="fw-semibold">${safeName} <span class="text-secondary">(${safeId})</span></div>
+                        <div class="small text-secondary mt-2"><strong>Prompt:</strong> ${safePrompt}</div>
+                        ${negativePrompt ? `<div class="small text-secondary mt-1"><strong>Negative:</strong> ${negativePrompt}</div>` : ''}
+                        ${imagePreviewMarkup}
                     </div>
-                `).join('');
+                `;
+                }).join('');
+
+                const safeTargetRegion = escapeHtml(brief.target_region);
+                const safeTargetAudience = escapeHtml(brief.target_audience);
+                const templateLabel = escapeHtml(brief.template);
+                const aspectRatiosList = brief.aspect_ratios.map(ratio => escapeHtml(ratio)).join(', ');
+                const localesList = brief.locales.map(locale => escapeHtml(locale)).join(', ');
 
                 const modalBody = `
                     <section class="mb-4">
                         <h3 class="h6 text-uppercase text-secondary fw-semibold">Campaign Details</h3>
                         <dl class="row mb-0">
-                            <dt class="col-sm-4">Region</dt><dd class="col-sm-8">${brief.target_region}</dd>
-                            <dt class="col-sm-4">Audience</dt><dd class="col-sm-8">${brief.target_audience}</dd>
-                            <dt class="col-sm-4">Template</dt><dd class="col-sm-8">${brief.template}</dd>
-                            <dt class="col-sm-4">Aspect Ratios</dt><dd class="col-sm-8">${brief.aspect_ratios.join(', ')}</dd>
-                            <dt class="col-sm-4">Locales</dt><dd class="col-sm-8">${brief.locales.join(', ')}</dd>
+                            <dt class="col-sm-4">Region</dt><dd class="col-sm-8">${safeTargetRegion}</dd>
+                            <dt class="col-sm-4">Audience</dt><dd class="col-sm-8">${safeTargetAudience}</dd>
+                            <dt class="col-sm-4">Template</dt><dd class="col-sm-8">${templateLabel}</dd>
+                            <dt class="col-sm-4">Aspect Ratios</dt><dd class="col-sm-8">${aspectRatiosList}</dd>
+                            <dt class="col-sm-4">Locales</dt><dd class="col-sm-8">${localesList}</dd>
                         </dl>
                     </section>
 
                     <section class="mb-4">
                         <h3 class="h6 text-uppercase text-secondary fw-semibold">Brand Identity</h3>
-                        <div class="d-flex flex-wrap align-items-center gap-3">
-                            <div class="rounded-circle" style="width: 32px; height: 32px; background:${brief.brand.primary_hex}; border:1px solid rgba(15,23,42,0.1);"></div>
-                            <div>
-                                <div class="small text-secondary">Primary Hex</div>
-                                <div class="fw-semibold">${brief.brand.primary_hex}</div>
+                        <div class="d-flex flex-wrap align-items-start gap-3">
+                            <div class="d-flex flex-wrap align-items-center gap-3 flex-grow-1">
+                                ${brandColorMarkup}
                             </div>
                             ${brandLogoMarkup}
                         </div>

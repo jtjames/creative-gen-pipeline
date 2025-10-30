@@ -252,6 +252,8 @@ def create_app() -> FastAPI:
         """Generate a temporary download link for a Dropbox file path."""
         try:
             link = storage.generate_temporary_link(path)
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
         except RuntimeError as exc:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
         return {"path": path, "link": link}
