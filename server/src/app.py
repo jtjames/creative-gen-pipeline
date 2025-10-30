@@ -7,8 +7,8 @@ from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
 import uvicorn
 
-from config import Settings, get_settings
-from storage import DropboxStorage
+from .config import Settings, get_settings
+from .storage import DropboxStorage
 
 DEFAULT_PORT = 1854
 
@@ -57,4 +57,4 @@ app = create_app()
 
 
 if __name__ == "__main__":  # pragma: no cover
-    uvicorn.run("app:app", host="0.0.0.0", port=DEFAULT_PORT, reload=True)
+    uvicorn.run("src.app:app", host="0.0.0.0", port=DEFAULT_PORT, reload=True)

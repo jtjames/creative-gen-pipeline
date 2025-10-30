@@ -19,8 +19,7 @@ from tests.utils import load_env_from_file  # noqa: E402  pylint: disable=wrong-
 env_values = load_env_from_file(SERVER_ROOT / ".env")
 
 GEMINI_API_KEY = env_values.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY")
-DEFAULT_MODEL = "models/gemini-2.5-flash"
-GEMINI_MODEL = env_values.get("GEMINI_MODEL") or os.environ.get("GEMINI_MODEL", DEFAULT_MODEL)
+GEMINI_MODEL = "models/gemini-2.5-flash"
 
 ENDPOINT = f"https://generativelanguage.googleapis.com/v1beta/{GEMINI_MODEL}:generateContent"
 
@@ -52,7 +51,7 @@ def test_gemini_generate_content_smoke():
     )
     if response.status_code == 404:
         raise AssertionError(
-            "Gemini API returned 404. Ensure the configured model is enabled for this key or set GEMINI_MODEL to an accessible model."
+            "Gemini API returned 404. Ensure the default model 'models/gemini-2.5-flash' is enabled for this key."
         )
 
     response.raise_for_status()

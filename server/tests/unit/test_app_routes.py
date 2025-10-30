@@ -13,7 +13,7 @@ if str(SERVER_ROOT) not in sys.path:
 
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="dropbox.session")
 
-from app import create_app  # noqa: E402  pylint: disable=wrong-import-position
+from src.app import create_app  # noqa: E402  pylint: disable=wrong-import-position
 
 
 class _DummyStorage:

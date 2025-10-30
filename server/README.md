@@ -23,7 +23,7 @@ pip install -r requirements.txt
 cp .env.example .env  # edit values with your Dropbox credentials
 
 # start the development server (auto-reload enabled)
-uvicorn app:app --reload --port 1854
+PYTHONPATH=src uvicorn src.app:app --reload --port 1854
 ```
 
 The server listens on `http://localhost:1854` by default in this project. Need a different port? adjust the flag, e.g. `--port 5000`.
@@ -45,7 +45,8 @@ Environment variables (or `.env`) recognised by the server:
 ## Integration Tests
 Run `pytest tests/integration` (or `make test-integration`) to execute live checks.
 - Dropbox test uploads a temporary artifact, generates a download link, and cleans up. It fails fast if `DROPBOX_ACCESS_TOKEN` is missing.
-- Gemini test sends a lightweight prompt to the Google AI Studio API (defaults to `models/gemini-2.5-flash`) and asserts a text response. It fails fast if `GEMINI_API_KEY` is missing or the configured model returns 404—set `GEMINI_MODEL` when you need a different model.
+- Gemini test sends a lightweight prompt to the Google AI Studio API (defaults to `models/gemini-2.5-flash`) and asserts a text response. It fails fast if `GEMINI_API_KEY` is missing.
+- Gemini→Dropbox test generates an image with Gemini (`models/gemini-1.5-flash` by default) and uploads it to Dropbox, then verifies the signed link returns image bytes.
 
 ## Next Steps
 As additional agents are implemented, expand this server with `/api/generate` and `/api/report` endpoints, reuse the Dropbox helper to persist outputs, and introduce the Google Gemini adapter for deterministic creative generation.

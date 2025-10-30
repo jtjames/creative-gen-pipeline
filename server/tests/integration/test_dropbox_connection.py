@@ -13,7 +13,7 @@ SERVER_ROOT = Path(__file__).resolve().parents[2]
 if str(SERVER_ROOT) not in sys.path:
     sys.path.insert(0, str(SERVER_ROOT))
 
-from storage import DropboxStorage  # noqa: E402  pylint: disable=wrong-import-position
+from src.storage import DropboxStorage  # noqa: E402  pylint: disable=wrong-import-position
 from tests.utils import load_env_from_file  # noqa: E402  pylint: disable=wrong-import-position
 
 env_values = load_env_from_file(SERVER_ROOT / ".env")

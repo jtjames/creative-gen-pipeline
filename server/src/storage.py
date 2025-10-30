@@ -9,7 +9,7 @@ import dropbox
 from dropbox.exceptions import ApiError
 from dropbox.files import WriteMode
 
-from config import Settings, get_settings
+from .config import Settings, get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +66,16 @@ class DropboxStorage:
         full_path = self._full_path(path)
         self._client.files_upload(data, full_path, mode=mode)
         return StorageArtifact(path=full_path)
+
+    def upload_image(
+        self,
+        *,
+        path: str,
+        data: bytes,
+        mode: WriteMode = WriteMode("overwrite"),
+    ) -> StorageArtifact:
+        """Convenience wrapper for storing image bytes."""
+        return self.upload_bytes(path=path, data=data, mode=mode)
 
     def delete_path(self, path: str) -> None:
         """Delete a path from Dropbox, ignoring missing entries."""

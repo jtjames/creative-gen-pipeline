@@ -1,6 +1,7 @@
 fastapi==0.114.1
 uvicorn[standard]==0.30.3
 dropbox==11.36.2
+httpx==0.27.2
 pydantic-settings==2.5.2
 pytest==7.4.4
 setuptools==75.1.0
