@@ -2,7 +2,7 @@ SHELL := /bin/bash
 PYTHON ?= python3
 SERVER_DIR := server
 
-.PHONY: install run test-unit test-integration test-integration-dropbox test-integration-gemini test-integration-e2e
+.PHONY: install run test-unit test-integration test-integration-dropbox test-integration-gemini test-integration-e2e test-genai-providers
 
 install:
 	cd $(SERVER_DIR) && $(PYTHON) -m pip install -r requirements.txt
@@ -24,3 +24,6 @@ test-integration-gemini:
 
 test-integration-e2e:
 	cd $(SERVER_DIR) && PYTHONPATH=$(SERVER_DIR) $(PYTHON) -m pytest tests/integration/test_gemini_to_dropbox.py
+
+test-genai-providers:
+	cd $(SERVER_DIR) && PYTHONPATH=. $(PYTHON) -m pytest tests/integration/test_genai_providers.py
