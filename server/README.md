@@ -42,8 +42,10 @@ Environment variables (or `.env`) recognised by the server:
 - `DROPBOX_ROOT_PATH`: Base folder for creative assets (default `/`).
 - `TEMPORARY_LINK_TTL_SECONDS`: Desired lifetime for generated temporary links (Dropbox enforces a 4-hour maximum).
 
-## Testing the Dropbox Connection
-Run `pytest tests/integration/test_dropbox_connection.py` to upload a temporary artifact, generate a download link, and clean up. The test skips itself if `DROPBOX_ACCESS_TOKEN` is not configured.
+## Integration Tests
+Run `pytest tests/integration` (or `make test-integration`) to execute live checks.
+- Dropbox test uploads a temporary artifact, generates a download link, and cleans up. It fails fast if `DROPBOX_ACCESS_TOKEN` is missing.
+- Gemini test sends a lightweight prompt to the Google AI Studio API (defaults to `models/gemini-2.5-flash`) and asserts a text response. It fails fast if `GEMINI_API_KEY` is missing or the configured model returns 404—set `GEMINI_MODEL` when you need a different model.
 
 ## Next Steps
 As additional agents are implemented, expand this server with `/api/generate` and `/api/report` endpoints, reuse the Dropbox helper to persist outputs, and introduce the Google Gemini adapter for deterministic creative generation.

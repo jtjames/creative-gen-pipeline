@@ -14,4 +14,4 @@ test-unit:
 	cd $(SERVER_DIR) && $(PYTHON) -m pytest tests/unit
 
 test-integration:
-	cd $(SERVER_DIR) && $(PYTHON) -m pytest tests/integration/test_dropbox_connection.py
+	cd $(SERVER_DIR) && $(PYTHON) -m pytest tests/integration
