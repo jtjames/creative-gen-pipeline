@@ -35,7 +35,7 @@
     <nav class="navbar navbar-expand-lg bg-white border-bottom shadow-sm">
         <div class="container py-2">
             <a class="navbar-brand fw-semibold text-uppercase text-primary" href="/">
-                Creative Automation
+                Creative Pipeline App
             </a>
             <div class="d-flex gap-2">
                 <a class="btn btn-sm btn-outline-primary" href="/upload-brief.html">Upload Brief</a>
@@ -98,7 +98,11 @@
         };
 
         document.addEventListener('DOMContentLoaded', () => {
-            briefModal = new bootstrap.Modal(document.getElementById('briefModal'));
+            const bootstrapGlobal = window.bootstrap;
+            const modalElement = document.getElementById('briefModal');
+            if (bootstrapGlobal && modalElement) {
+                briefModal = new bootstrapGlobal.Modal(modalElement);
+            }
             loadBriefs();
             setInterval(loadBriefs, 30000);
         });
@@ -250,7 +254,15 @@
                 `;
 
                 document.getElementById('modalBody').innerHTML = modalBody;
-                briefModal.show();
+                if (briefModal) {
+                    briefModal.show();
+                } else {
+                    const bootstrapGlobal = window.bootstrap;
+                    if (bootstrapGlobal) {
+                        const modalInstance = new bootstrapGlobal.Modal(document.getElementById('briefModal'));
+                        modalInstance.show();
+                    }
+                }
             } catch (error) {
                 showError(error.message || 'Unable to load brief details');
             }

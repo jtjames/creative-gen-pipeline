@@ -111,9 +111,21 @@ class DropboxStorage:
         except ApiError as exc:
             logger.error("Failed to list folder %s: %s", list_path, exc)
             raise RuntimeError("Unable to list Dropbox folder") from exc
+
+        root_prefix = self.root_path.lower()
+        if root_prefix != "/" and not root_prefix.endswith("/"):
+            root_prefix = f"{root_prefix}/"
+
         while True:
             for entry in result.entries:
-                yield entry.path_lower
+                full_lower = entry.path_lower
+                relative_lower = full_lower
+                if root_prefix != "/":
+                    if full_lower.startswith(root_prefix):
+                        relative_lower = full_lower[len(root_prefix) - 1:]
+                if not relative_lower.startswith("/"):
+                    relative_lower = f"/{relative_lower.lstrip('/')}"
+                yield relative_lower
             if not result.has_more:
                 break
             result = self._client.files_list_folder_continue(result.cursor)
