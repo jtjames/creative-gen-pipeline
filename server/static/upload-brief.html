@@ -257,37 +257,61 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoH5P6CkX4p2O6pP1i2M9a7uHItMq76C50+DQaF5D9F6Xdl" crossorigin="anonymous"></script>
 
     <script>
+        let inputMode = 'manual';
         let productCount = 0;
         let locales = [];
+        let parsedJsonBrief = null;
 
-        window.onload = function() {
-            addProduct();
-            addProduct();
+        window.addEventListener('load', () => {
+            initializeManualForm();
             syncColorInputs();
-        };
-
-        document.getElementById('brandColor').addEventListener('input', function(e) {
-            document.getElementById('brandColorHex').value = e.target.value.toUpperCase();
-        });
-
-        document.getElementById('brandColorHex').addEventListener('input', function(e) {
-            const hex = e.target.value;
-            if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
-                document.getElementById('brandColor').value = hex;
+            setupInputModeToggle();
+            const jsonFileInput = document.getElementById('jsonFileInput');
+            if (jsonFileInput) {
+                jsonFileInput.addEventListener('change', handleJsonFileUpload);
             }
         });
+
+        function initializeManualForm() {
+            addProduct();
+            addProduct();
+        }
+
+        function setupInputModeToggle() {
+            document.querySelectorAll('input[name="inputMode"]').forEach(radio => {
+                radio.addEventListener('change', (event) => setInputMode(event.target.value));
+            });
+        }
+
+        function setInputMode(mode) {
+            inputMode = mode;
+            const manualSection = document.getElementById('manualSection');
+            const jsonSection = document.getElementById('jsonSection');
+
+            if (mode === 'manual') {
+                manualSection.classList.remove('d-none');
+                jsonSection.classList.add('d-none');
+            } else {
+                manualSection.classList.add('d-none');
+                jsonSection.classList.remove('d-none');
+            }
+        }
 
         function syncColorInputs() {
             const colorPicker = document.getElementById('brandColor');
             const hexInput = document.getElementById('brandColorHex');
 
-            colorPicker.addEventListener('input', function() {
-                hexInput.value = this.value.toUpperCase();
+            if (!colorPicker || !hexInput) {
+                return;
+            }
+
+            colorPicker.addEventListener('input', () => {
+                hexInput.value = colorPicker.value.toUpperCase();
             });
 
-            hexInput.addEventListener('input', function() {
-                if (/^#[0-9A-Fa-f]{6}$/.test(this.value)) {
-                    colorPicker.value = this.value;
+            hexInput.addEventListener('input', () => {
+                if (/^#[0-9A-Fa-f]{6}$/.test(hexInput.value)) {
+                    colorPicker.value = hexInput.value;
                 }
             });
         }
@@ -328,11 +352,12 @@
 
         function addProduct() {
             productCount++;
-            const container = document.getElementById('productsContainer');
+            const container = document.getElementById('manualProductsContainer');
+            if (!container) return;
 
             const productCard = document.createElement('div');
             productCard.className = 'product-card';
-            productCard.id = `product_${productCount}`;
+            productCard.id = `manual_product_${productCount}`;
 
             productCard.innerHTML = `
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -371,8 +396,8 @@
                         <label class="btn btn-outline-primary btn-sm mb-0" for="product_image_${productCount}">
                             📁 Choose Image
                         </label>
-                        <input type="file" id="product_image_${productCount}" class="file-upload-input d-none"
-                               accept="image/jpeg,image/png,image/webp" required onchange="handleImageUpload(${productCount})">
+                        <input type="file" id="product_image_${productCount}" class="file-upload-input d-none manual-product-image"
+                               accept="image/jpeg,image/png,image/webp" required onchange="handleManualImageUpload(${productCount})">
                         <span class="file-name small" id="filename_${productCount}">No file chosen</span>
                     </div>
                     <div class="mt-3">
@@ -386,16 +411,147 @@
         }
 
         function removeProduct(id) {
-            const product = document.getElementById(`product_${id}`);
+            const product = document.getElementById(`manual_product_${id}`);
             if (product) {
                 product.remove();
             }
         }
 
-        function handleImageUpload(productId) {
+        function handleManualImageUpload(productId) {
             const input = document.getElementById(`product_image_${productId}`);
             const filenameSpan = document.getElementById(`filename_${productId}`);
             const preview = document.getElementById(`preview_${productId}`);
+
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+
+                if (file.size > 10 * 1024 * 1024) {
+                    showAlert('Image must be less than 10MB', 'error');
+                    input.value = '';
+                    filenameSpan.textContent = 'No file chosen';
+                    preview.classList.add('d-none');
+                    return;
+                }
+
+                filenameSpan.textContent = file.name;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.classList.remove('d-none');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleJsonFileUpload(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('jsonTextInput').value = e.target.result;
+                parsedJsonBrief = null;
+                document.getElementById('jsonPreview').innerHTML = '';
+                document.getElementById('jsonProductsContainer').innerHTML = '';
+            };
+            reader.readAsText(file);
+        }
+
+        function loadJsonBrief() {
+            const jsonInput = document.getElementById('jsonTextInput');
+            const rawJson = (jsonInput.value || '').trim();
+
+            if (!rawJson) {
+                showAlert('Please paste or upload brief JSON before validating.', 'error');
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(rawJson);
+                if (!Array.isArray(parsed.products) || parsed.products.length === 0) {
+                    showAlert('JSON brief must include a products array with at least one product.', 'error');
+                    return;
+                }
+
+                parsedJsonBrief = parsed;
+                jsonInput.value = JSON.stringify(parsed, null, 2);
+                renderJsonPreview(parsed);
+                renderJsonProducts(parsed.products);
+                showAlert('JSON brief validated and loaded.', 'success');
+            } catch (error) {
+                showAlert(`Invalid JSON: ${error.message}`, 'error');
+            }
+        }
+
+        function renderJsonPreview(brief) {
+            const preview = document.getElementById('jsonPreview');
+            const productCount = Array.isArray(brief.products) ? brief.products.length : 0;
+            const localesCount = Array.isArray(brief.locales) ? brief.locales.length : 0;
+
+            preview.innerHTML = `
+                <div class="card border-0 bg-body-tertiary">
+                    <div class="card-body">
+                        <h3 class="h6 text-secondary text-uppercase">Summary</h3>
+                        <dl class="row mb-0 small">
+                            <dt class="col-sm-4">Campaign</dt><dd class="col-sm-8">${brief.campaign || '—'}</dd>
+                            <dt class="col-sm-4">Region</dt><dd class="col-sm-8">${brief.target_region || '—'}</dd>
+                            <dt class="col-sm-4">Products</dt><dd class="col-sm-8">${productCount}</dd>
+                            <dt class="col-sm-4">Locales</dt><dd class="col-sm-8">${localesCount}</dd>
+                            <dt class="col-sm-4">Template</dt><dd class="col-sm-8">${brief.template || '—'}</dd>
+                        </dl>
+                    </div>
+                </div>`;
+        }
+
+        function renderJsonProducts(products) {
+            const container = document.getElementById('jsonProductsContainer');
+            container.innerHTML = '';
+
+            if (!Array.isArray(products) || products.length === 0) {
+                container.innerHTML = '<div class="alert alert-warning" role="alert">No products found in the JSON brief.</div>';
+                return;
+            }
+
+            products.forEach((product, index) => {
+                const productId = product.id || `product-${index + 1}`;
+                const safeId = productId.replace(/[^a-zA-Z0-9_-]/g, '_');
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.dataset.productId = productId;
+
+                card.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-semibold text-primary">${product.name || productId}</span>
+                        <span class="badge bg-light text-secondary border">${productId}</span>
+                    </div>
+                    <div class="small text-secondary mb-3"><strong>Prompt:</strong> ${product.prompt || '—'}</div>
+                    ${product.negative_prompt ? `<div class="small text-secondary mb-3"><strong>Negative:</strong> ${product.negative_prompt}</div>` : ''}
+                    <div class="form-group">
+                        <label class="form-label">Product Image <span class="text-danger">*</span></label>
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="btn btn-outline-primary btn-sm mb-0" for="json_product_image_${safeId}">📁 Choose Image</label>
+                            <input type="file" id="json_product_image_${safeId}" class="file-upload-input d-none json-product-image"
+                                   accept="image/jpeg,image/png,image/webp" required onchange="handleJsonImageUpload('${safeId}')">
+                            <span class="file-name small" id="json_filename_${safeId}">No file chosen</span>
+                        </div>
+                        <div class="mt-3">
+                            <img id="json_preview_${safeId}" class="image-preview d-none" alt="Product preview">
+                        </div>
+                        <div class="form-text">Max 10MB. Formats: JPEG, PNG, WEBP.</div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        function handleJsonImageUpload(safeId) {
+            const input = document.getElementById(`json_product_image_${safeId}`);
+            const filenameSpan = document.getElementById(`json_filename_${safeId}`);
+            const preview = document.getElementById(`json_preview_${safeId}`);
 
             if (input.files && input.files[0]) {
                 const file = input.files[0];
@@ -445,84 +601,117 @@
         document.getElementById('briefForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
-            const aspectRatios = [];
-            if (document.getElementById('ratio_1_1').checked) aspectRatios.push('1:1');
-            if (document.getElementById('ratio_9_16').checked) aspectRatios.push('9:16');
-            if (document.getElementById('ratio_16_9').checked) aspectRatios.push('16:9');
+            const formData = new FormData();
 
-            if (aspectRatios.length === 0) {
-                showAlert('Please select at least one aspect ratio', 'error');
-                return;
-            }
+            if (inputMode === 'manual') {
+                const aspectRatios = [];
+                if (document.getElementById('ratio_1_1').checked) aspectRatios.push('1:1');
+                if (document.getElementById('ratio_9_16').checked) aspectRatios.push('9:16');
+                if (document.getElementById('ratio_16_9').checked) aspectRatios.push('16:9');
 
-            if (locales.length === 0) {
-                showAlert('Please generate locale fields first', 'error');
-                return;
-            }
-
-            const brief = {
-                campaign: document.getElementById('campaign').value,
-                target_region: document.getElementById('targetRegion').value,
-                target_audience: document.getElementById('targetAudience').value,
-                locales: locales,
-                message: {},
-                cta: {},
-                products: [],
-                brand: {
-                    primary_hex: document.getElementById('brandColorHex').value,
-                    logo_path: document.getElementById('logoPath').value
-                },
-                aspect_ratios: aspectRatios,
-                template: document.getElementById('template').value
-            };
-
-            locales.forEach(locale => {
-                brief.message[locale] = document.getElementById(`message_${locale}`).value;
-                brief.cta[locale] = document.getElementById(`cta_${locale}`).value;
-            });
-
-            const productCards = document.querySelectorAll('.product-card');
-            let hasAllImages = true;
-
-            productCards.forEach((card, index) => {
-                const id = card.id.split('_')[1];
-                const productId = document.getElementById(`product_id_${id}`).value;
-                const imageInput = document.getElementById(`product_image_${id}`);
-
-                if (!imageInput.files || !imageInput.files[0]) {
-                    hasAllImages = false;
-                    showAlert(`Product ${index + 1} is missing an image`, 'error');
+                if (aspectRatios.length === 0) {
+                    showAlert('Please select at least one aspect ratio', 'error');
                     return;
                 }
 
-                brief.products.push({
-                    id: productId,
-                    name: document.getElementById(`product_name_${id}`).value,
-                    prompt: document.getElementById(`product_prompt_${id}`).value,
-                    negative_prompt: document.getElementById(`product_negative_${id}`).value || undefined,
-                    image_path: "placeholder"
-                });
-            });
-
-            if (!hasAllImages) return;
-
-            if (brief.products.length < 2) {
-                showAlert('Minimum 2 products required', 'error');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('brief_json', JSON.stringify(brief));
-
-            productCards.forEach(card => {
-                const id = card.id.split('_')[1];
-                const productId = document.getElementById(`product_id_${id}`).value;
-                const imageInput = document.getElementById(`product_image_${id}`);
-
-                if (imageInput.files && imageInput.files[0]) {
-                    formData.append('product_images', imageInput.files[0], `${productId}.${imageInput.files[0].name.split('.').pop()}`);
+                if (locales.length === 0) {
+                    showAlert('Please generate locale fields first', 'error');
+                    return;
                 }
-            });
+
+                const brief = {
+                    campaign: document.getElementById('campaign').value,
+                    target_region: document.getElementById('targetRegion').value,
+                    target_audience: document.getElementById('targetAudience').value,
+                    locales: locales,
+                    message: {},
+                    cta: {},
+                    products: [],
+                    brand: {
+                        primary_hex: document.getElementById('brandColorHex').value,
+                        logo_path: document.getElementById('logoPath').value
+                    },
+                    aspect_ratios: aspectRatios,
+                    template: document.getElementById('template').value
+                };
+
+                locales.forEach(locale => {
+                    brief.message[locale] = document.getElementById(`message_${locale}`).value;
+                    brief.cta[locale] = document.getElementById(`cta_${locale}`).value;
+                });
+
+                const productCards = document.querySelectorAll('#manualProductsContainer .product-card');
+                if (productCards.length < 2) {
+                    showAlert('Minimum 2 products required', 'error');
+                    return;
+                }
+
+                for (const card of productCards) {
+                    const id = card.id.split('_')[2];
+                    const productId = document.getElementById(`product_id_${id}`).value;
+                    const imageInput = document.getElementById(`product_image_${id}`);
+
+                    if (!imageInput.files || !imageInput.files[0]) {
+                        showAlert('Each product must include an image upload.', 'error');
+                        return;
+                    }
+
+                    brief.products.push({
+                        id: productId,
+                        name: document.getElementById(`product_name_${id}`).value,
+                        prompt: document.getElementById(`product_prompt_${id}`).value,
+                        negative_prompt: document.getElementById(`product_negative_${id}`).value || undefined,
+                        image_path: 'placeholder'
+                    });
+
+                    const file = imageInput.files[0];
+                    const ext = file.name.includes('.') ? file.name.split('.').pop() : 'png';
+                    formData.append('product_images', file, `${productId}.${ext}`);
+                }
+
+                formData.append('brief_json', JSON.stringify(brief));
+            } else {
+                const jsonText = (document.getElementById('jsonTextInput').value || '').trim();
+                if (!jsonText) {
+                    showAlert('Provide a JSON brief before submitting.', 'error');
+                    return;
+                }
+
+                let brief;
+                try {
+                    brief = JSON.parse(jsonText);
+                } catch (error) {
+                    showAlert(`Invalid JSON: ${error.message}`, 'error');
+                    return;
+                }
+
+                if (!Array.isArray(brief.products) || brief.products.length === 0) {
+                    showAlert('JSON brief must include a products array.', 'error');
+                    return;
+                }
+
+                const productCards = document.querySelectorAll('#jsonProductsContainer .product-card');
+                if (productCards.length === 0) {
+                    showAlert('Validate the JSON brief before submitting.', 'error');
+                    return;
+                }
+
+                for (const card of productCards) {
+                    const productId = card.dataset.productId;
+                    const fileInput = card.querySelector('input[type="file"]');
+
+                    if (!fileInput.files || !fileInput.files[0]) {
+                        showAlert(`Missing image for product ${productId}.`, 'error');
+                        return;
+                    }
+
+                    const file = fileInput.files[0];
+                    const ext = file.name.includes('.') ? file.name.split('.').pop() : 'png';
+                    formData.append('product_images', file, `${productId}.${ext}`);
+                }
+
+                formData.append('brief_json', jsonText);
+            }
 
             document.getElementById('loadingIndicator').style.display = 'flex';
             document.getElementById('submitBtn').disabled = true;
