@@ -104,11 +104,11 @@
                     <div class="mb-4">
                         <span class="form-label d-block mb-2">Brief Input Mode</span>
                         <div class="btn-group" role="group" aria-label="Brief input mode toggle">
-                            <input type="radio" class="btn-check" name="inputMode" id="modeManual" value="manual" autocomplete="off" checked>
-                            <label class="btn btn-outline-primary" for="modeManual">Enter Manually</label>
-
-                            <input type="radio" class="btn-check" name="inputMode" id="modeJson" value="json" autocomplete="off">
+                            <input type="radio" class="btn-check" name="inputMode" id="modeJson" value="json" autocomplete="off" checked>
                             <label class="btn btn-outline-primary" for="modeJson">Upload JSON</label>
+
+                            <input type="radio" class="btn-check" name="inputMode" id="modeManual" value="manual" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="modeManual">Enter Manually</label>
                         </div>
                     </div>
 
@@ -305,7 +305,7 @@
     <script src="/static/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        let inputMode = 'manual';
+        let inputMode = 'json';
         let productCount = 0;
         let locales = [];
         let parsedJsonBrief = null;
@@ -314,6 +314,7 @@
             initializeManualForm();
             syncColorInputs();
             setupInputModeToggle();
+            setInputMode('json'); // Show JSON section by default
             const jsonFileInput = document.getElementById('jsonFileInput');
             if (jsonFileInput) {
                 jsonFileInput.addEventListener('change', handleJsonFileUpload);

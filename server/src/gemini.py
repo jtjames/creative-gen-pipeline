@@ -9,7 +9,7 @@ import httpx
 
 from .config import Settings, get_settings
 
-DEFAULT_GEMINI_MODEL = "models/gemini-2.0-flash-preview-image-generation"
+DEFAULT_GEMINI_MODEL = "models/gemini-2.5-flash-image-preview"
 
 
 @dataclass(frozen=True)
@@ -78,16 +78,22 @@ class GeminiClient:
             }
         ]
 
+        # Gemini 2.5 Flash Image uses a simpler generation config
+        # aspectRatio is not supported - aspect ratio is controlled via prompt
         generation_config: dict[str, Any] = {
-            "responseModalities": ["TEXT", "IMAGE"]
+            "responseModalities": ["IMAGE"]
         }
-        if aspect_ratio:
-            generation_config["aspectRatio"] = aspect_ratio
 
         payload = {
             "contents": contents,
             "generationConfig": generation_config,
         }
+
+        # Debug logging
+        print(f"Gemini API call to: {self._endpoint_for(target_model)}")
+        print(f"Parts count: {len(parts)}")
+        if reference_image_bytes:
+            print(f"Reference image size: {len(reference_image_bytes)} bytes")
 
         async with httpx.AsyncClient(timeout=self._timeout) as client:
             response = await client.post(
@@ -95,7 +101,18 @@ class GeminiClient:
                 params={"key": self.api_key},
                 json=payload,
             )
-        response.raise_for_status()
+
+        if response.status_code != 200:
+            error_detail = response.text
+            try:
+                error_json = response.json()
+                error_detail = error_json.get("error", {}).get("message", error_detail)
+            except Exception:
+                pass
+            raise RuntimeError(
+                f"Gemini API error ({response.status_code}): {error_detail}"
+            )
+
         data = response.json()
 
         candidate = _first_candidate(data)

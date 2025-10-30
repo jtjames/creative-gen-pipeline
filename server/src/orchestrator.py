@@ -214,7 +214,7 @@ class OrchestratorAgent:
         from .openai_image import OpenAIImageClient
 
         if isinstance(genai_client, GeminiClient):
-            model_name = "gemini-2.0-flash-preview-image-generation"
+            model_name = "gemini-2.5-flash-image-preview"
         elif isinstance(genai_client, OpenAIImageClient):
             model_name = "dall-e-3"
         else:
