@@ -57,7 +57,7 @@ def test_gemini_image_persisted_to_dropbox():
     gemini_client = GeminiClient(settings=settings)
     storage = DropboxStorage(settings=settings)
 
-    image_model = "models/gemini-1.5-flash"
+    image_model = "models/gemini-2.0-flash-preview-image-generation"
 
     image_bytes = asyncio.run(_generate_image(gemini_client, image_model))
 

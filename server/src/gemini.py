@@ -9,7 +9,7 @@ import httpx
 
 from .config import Settings, get_settings
 
-DEFAULT_GEMINI_MODEL = "models/gemini-2.5-flash"
+DEFAULT_GEMINI_MODEL = "models/gemini-2.0-flash-preview-image-generation"
 
 
 @dataclass(frozen=True)
@@ -48,19 +48,21 @@ class GeminiClient:
     ) -> GeminiImageArtifact:
         target_model = model or DEFAULT_GEMINI_MODEL
 
+        # Build the prompt text, incorporating negative prompts if provided
+        prompt_text = prompt
+        if negative_prompt:
+            prompt_text = f"{prompt}\n\nNegative prompt: {negative_prompt}"
+
         contents: list[dict[str, Any]] = [
             {
                 "role": "user",
-                "parts": [{"text": prompt}],
+                "parts": [{"text": prompt_text}],
             }
         ]
-        if negative_prompt:
-            contents.append({
-                "role": "user",
-                "parts": [{"text": f"Negative prompt: {negative_prompt}"}],
-            })
 
-        generation_config: dict[str, Any] = {"responseMimeType": mime_type}
+        generation_config: dict[str, Any] = {
+            "responseModalities": ["TEXT", "IMAGE"]
+        }
         if aspect_ratio:
             generation_config["aspectRatio"] = aspect_ratio
 
