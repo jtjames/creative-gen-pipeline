@@ -6,7 +6,7 @@ from Dropbox, treating it as a document database.
 """
 
 import json
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from typing import List, Optional, Dict
 from pathlib import Path
 
@@ -95,7 +95,7 @@ class BriefService:
         # Create metadata
         metadata = BriefMetadata(
             campaign_id=campaign_id,
-            uploaded_at=datetime.now(UTC),
+            uploaded_at=datetime.now(timezone.utc),
         )
         metadata_json = metadata.model_dump_json(indent=2)
         metadata_path = f"{campaign_folder}/metadata.json"

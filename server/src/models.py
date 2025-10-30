@@ -6,7 +6,7 @@ that are uploaded to the system and stored in Dropbox.
 """
 
 from typing import Dict, List, Optional
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
@@ -83,7 +83,7 @@ class BriefMetadata(BaseModel):
     """Metadata about a stored campaign brief."""
 
     campaign_id: str = Field(..., description="Campaign identifier")
-    uploaded_at: datetime = Field(default_factory=lambda: datetime.now(UTC), description="Upload timestamp (UTC)")
+    uploaded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Upload timestamp (UTC)")
     version: str = Field(default="1.0.0", description="Brief format version")
     status: str = Field(default="pending", description="Processing status")
 

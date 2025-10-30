@@ -1,7 +1,7 @@
 """Unit tests for campaign brief API endpoints."""
 
 from unittest.mock import Mock, patch
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -78,7 +78,7 @@ def test_upload_brief_success(client, sample_brief_data, mock_brief_service):
     mock_service_instance = Mock()
     mock_brief_service.return_value = mock_service_instance
 
-    upload_time = datetime.now(UTC)
+    upload_time = datetime.now(timezone.utc)
     mock_service_instance.upload_brief.return_value = BriefUploadResponse(
         campaign_id="summer-2025-promo",
         brief_path="/briefs/summer-2025-promo/brief.json",
@@ -148,7 +148,7 @@ def test_list_briefs_success(client, mock_brief_service):
     mock_service_instance = Mock()
     mock_brief_service.return_value = mock_service_instance
 
-    upload_time = datetime.now(UTC)
+    upload_time = datetime.now(timezone.utc)
     mock_service_instance.list_briefs.return_value = [
         BriefListItem(
             campaign_id="campaign-1",
