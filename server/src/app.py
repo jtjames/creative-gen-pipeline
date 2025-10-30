@@ -72,17 +72,20 @@ def create_app() -> FastAPI:
     @app.post("/briefs", response_model=BriefUploadResponse, status_code=status.HTTP_201_CREATED)
     async def upload_brief(
         brief_json: str = Form(..., description="Campaign brief JSON"),
-        product_images: List[UploadFile] = File(..., description="Product images (one per product)"),
+        product_images: List[UploadFile] = File(default=[], description="Product images (optional - will generate if missing)"),
+        brand_logo: UploadFile | None = File(None, description="Optional brand logo image"),
         brief_service: BriefService = Depends(build_brief_service)
     ):
         """
-        Upload a new campaign brief with product images.
+        Upload a new campaign brief with optional product images.
 
         Accepts multipart/form-data with:
         - brief_json: JSON string containing the campaign brief
-        - product_images: File uploads for each product (filename should match product_id)
+        - product_images: File uploads for each product (optional - will be generated if missing)
+        - brand_logo: Optional brand logo image
 
-        Validates the brief against the schema and stores it in Dropbox along with product images.
+        Products without uploaded images must have prompts for AI generation.
+        Validates the brief against the schema and stores it in Dropbox.
         Returns the upload metadata including storage paths.
         """
         try:
@@ -106,16 +109,37 @@ def create_app() -> FastAPI:
 
                 product_image_map[product_id] = image_bytes
 
-            # Verify all products have images
-            missing_images = [p.id for p in brief.products if p.id not in product_image_map]
-            if missing_images:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=f"Missing images for products: {', '.join(missing_images)}"
-                )
+            # Mark products without images as needing generation
+            # Products can either have uploaded images OR prompts for generation
+            for product in brief.products:
+                if product.id not in product_image_map:
+                    # Verify product has a prompt for generation
+                    if not product.prompt or not product.prompt.strip():
+                        raise HTTPException(
+                            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail=f"Product {product.id} must have either an uploaded image or a generation prompt"
+                        )
+                    # Set placeholder - orchestrator will generate
+                    product.image_path = "pending-generation"
+
+            # Read brand logo if provided
+            brand_logo_data = None
+            if brand_logo is not None:
+                logo_bytes = await brand_logo.read()
+                if logo_bytes:
+                    if len(logo_bytes) > 10 * 1024 * 1024:
+                        raise HTTPException(
+                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            detail="Brand logo exceeds 10MB limit"
+                        )
+                    brand_logo_data = (brand_logo.filename or "brand-logo", logo_bytes)
 
             # Upload brief and images
-            response = brief_service.upload_brief(brief, product_images=product_image_map)
+            response = brief_service.upload_brief(
+                brief,
+                product_images=product_image_map if product_image_map else None,
+                brand_logo=brand_logo_data
+            )
             return response
 
         except json.JSONDecodeError as exc:

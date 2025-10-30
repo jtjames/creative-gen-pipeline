@@ -24,6 +24,9 @@ class Brand(BaseModel):
     """Brand identity configuration."""
 
     primary_hex: str = Field(..., pattern=r"^#[0-9A-Fa-f]{6}$", description="Primary brand color")
+    secondary_hex: Optional[str] = Field(
+        None, pattern=r"^#[0-9A-Fa-f]{6}$", description="Secondary brand color (optional)"
+    )
     logo_path: str = Field(..., min_length=1, description="Path to logo in brand library")
 
 

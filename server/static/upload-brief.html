@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <title>Upload Campaign Brief - Creative Automation</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="/static/css/bootstrap.min.css">
     <style>
         :root {
             --brand-primary: #4f46e5;
@@ -175,7 +176,7 @@
 
                     <section class="mb-5 pb-4 border-bottom">
                         <h2 class="section-title mb-3">Products</h2>
-                        <p class="form-text mb-3">Minimum 2 products required. Each product must have an image.</p>
+                        <p class="form-text mb-3">Minimum 2 products required. Product images are optional - AI will generate them from your prompts if not uploaded.</p>
 
                         <div id="manualProductsContainer" class="d-flex flex-column gap-4"></div>
 
@@ -193,8 +194,20 @@
                                 <input class="form-control form-control-color" type="color" id="brandColor" name="brandColor" value="#FF5733" title="Choose your color">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label" for="brandColorHex">Brand Color Hex <span class="text-danger">*</span></label>
+                                <label class="form-label" for="brandColorHex">Primary Color Hex <span class="text-danger">*</span></label>
                                 <input class="form-control" type="text" id="brandColorHex" name="brandColorHex" value="#FF5733" pattern="^#[0-9A-Fa-f]{6}$">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-6">
+                                <label class="form-label" for="brandSecondaryColor">Secondary Brand Color (Optional)</label>
+                                <input class="form-control form-control-color" type="color" id="brandSecondaryColor" name="brandSecondaryColor" value="#22d3ee" title="Choose your secondary color">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="brandSecondaryHex">Secondary Color Hex</label>
+                                <input class="form-control" type="text" id="brandSecondaryHex" name="brandSecondaryHex" placeholder="#22D3EE" pattern="^#[0-9A-Fa-f]{6}$">
+                                <div class="form-text">Optional accent color; leave blank to skip.</div>
                             </div>
                         </div>
 
@@ -202,6 +215,22 @@
                             <label class="form-label" for="logoPath">Logo Path <span class="text-danger">*</span></label>
                             <input class="form-control" type="text" id="logoPath" name="logoPath" placeholder="/brandlib/acme/logo.png">
                             <div class="form-text">Path to logo in brand library.</div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="form-label" for="manualBrandLogo">Brand Logo Image (Optional)</label>
+                            <div class="d-flex align-items-center gap-2">
+                                <label class="btn btn-outline-primary btn-sm mb-0" for="manualBrandLogo">
+                                    📁 Choose Logo
+                                </label>
+                                <input type="file" id="manualBrandLogo" class="file-upload-input d-none"
+                                       accept="image/jpeg,image/png,image/webp,image/svg+xml" onchange="handleManualLogoUpload()">
+                                <span class="file-name small" id="manualLogoFilename">No file chosen</span>
+                            </div>
+                            <div class="mt-3">
+                                <img id="manualLogoPreview" class="image-preview d-none" alt="Brand logo preview">
+                            </div>
+                            <div class="form-text">Optional. Upload a logo file to override the logo_path. Max 10MB.</div>
                         </div>
                     </section>
 
@@ -234,13 +263,32 @@
 
                         <section class="mb-5 pb-4 border-bottom">
                             <h2 class="section-title mb-3">Product Images</h2>
-                            <p class="form-text mb-3">Upload imagery for each product defined in the JSON payload.</p>
+                            <p class="form-text mb-3">Upload imagery for each product (optional - AI will generate from prompts if not provided).</p>
                             <div id="jsonProductsContainer" class="d-flex flex-column gap-4"></div>
+                        </section>
+
+                        <section class="mb-5 pb-4 border-bottom">
+                            <h2 class="section-title mb-3">Brand Logo (Optional)</h2>
+                            <div class="form-group">
+                                <label class="form-label" for="jsonBrandLogo">Brand Logo Image (Optional)</label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <label class="btn btn-outline-primary btn-sm mb-0" for="jsonBrandLogo">
+                                        📁 Choose Logo
+                                    </label>
+                                    <input type="file" id="jsonBrandLogo" class="file-upload-input d-none"
+                                           accept="image/jpeg,image/png,image/webp,image/svg+xml" onchange="handleJsonLogoUpload()">
+                                    <span class="file-name small" id="jsonLogoFilename">No file chosen</span>
+                                </div>
+                                <div class="mt-3">
+                                    <img id="jsonLogoPreview" class="image-preview d-none" alt="Brand logo preview">
+                                </div>
+                                <div class="form-text">Optional. Upload a logo file to override the logo_path from JSON. Max 10MB.</div>
+                            </div>
                         </section>
                     </div>
 
                     <section class="mb-2">
-                        <div class="d-flex align-items-center gap-3 mb-3" id="loadingIndicator" style="display:none;">
+                        <div class="d-none align-items-center gap-3 mb-3" id="loadingIndicator">
                             <div class="spinner-border text-primary" role="status"></div>
                             <span class="text-secondary">Uploading brief and images...</span>
                         </div>
@@ -254,7 +302,7 @@
         </div>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoH5P6CkX4p2O6pP1i2M9a7uHItMq76C50+DQaF5D9F6Xdl" crossorigin="anonymous"></script>
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
 
     <script>
         let inputMode = 'manual';
@@ -391,7 +439,7 @@
                 </div>
 
                 <div class="form-group mt-3">
-                    <label class="form-label">Product Image <span class="text-danger">*</span></label>
+                    <label class="form-label">Product Image (Optional - AI Generated if not provided)</label>
                     <div class="d-flex align-items-center gap-2">
                         <label class="btn btn-outline-primary btn-sm mb-0" for="product_image_${productCount}">
                             📁 Choose Image
@@ -403,7 +451,7 @@
                     <div class="mt-3">
                         <img id="preview_${productCount}" class="image-preview d-none" alt="Product preview">
                     </div>
-                    <div class="form-text">Max 10MB. Formats: JPEG, PNG, WEBP.</div>
+                    <div class="form-text">Optional. If not uploaded, AI will generate from your prompt. Max 10MB. Formats: JPEG, PNG, WEBP.</div>
                 </div>
             `;
 
@@ -427,6 +475,60 @@
 
                 if (file.size > 10 * 1024 * 1024) {
                     showAlert('Image must be less than 10MB', 'error');
+                    input.value = '';
+                    filenameSpan.textContent = 'No file chosen';
+                    preview.classList.add('d-none');
+                    return;
+                }
+
+                filenameSpan.textContent = file.name;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.classList.remove('d-none');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleManualLogoUpload() {
+            const input = document.getElementById('manualBrandLogo');
+            const filenameSpan = document.getElementById('manualLogoFilename');
+            const preview = document.getElementById('manualLogoPreview');
+
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+
+                if (file.size > 10 * 1024 * 1024) {
+                    showAlert('Logo must be less than 10MB', 'error');
+                    input.value = '';
+                    filenameSpan.textContent = 'No file chosen';
+                    preview.classList.add('d-none');
+                    return;
+                }
+
+                filenameSpan.textContent = file.name;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.classList.remove('d-none');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleJsonLogoUpload() {
+            const input = document.getElementById('jsonBrandLogo');
+            const filenameSpan = document.getElementById('jsonLogoFilename');
+            const preview = document.getElementById('jsonLogoPreview');
+
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+
+                if (file.size > 10 * 1024 * 1024) {
+                    showAlert('Logo must be less than 10MB', 'error');
                     input.value = '';
                     filenameSpan.textContent = 'No file chosen';
                     preview.classList.add('d-none');
@@ -531,17 +633,17 @@
                     <div class="small text-secondary mb-3"><strong>Prompt:</strong> ${product.prompt || '—'}</div>
                     ${product.negative_prompt ? `<div class="small text-secondary mb-3"><strong>Negative:</strong> ${product.negative_prompt}</div>` : ''}
                     <div class="form-group">
-                        <label class="form-label">Product Image <span class="text-danger">*</span></label>
+                        <label class="form-label">Product Image (Optional - AI Generated if not provided)</label>
                         <div class="d-flex align-items-center gap-2">
                             <label class="btn btn-outline-primary btn-sm mb-0" for="json_product_image_${safeId}">📁 Choose Image</label>
                             <input type="file" id="json_product_image_${safeId}" class="file-upload-input d-none json-product-image"
-                                   accept="image/jpeg,image/png,image/webp" required onchange="handleJsonImageUpload('${safeId}')">
+                                   accept="image/jpeg,image/png,image/webp" onchange="handleJsonImageUpload('${safeId}')">
                             <span class="file-name small" id="json_filename_${safeId}">No file chosen</span>
                         </div>
                         <div class="mt-3">
                             <img id="json_preview_${safeId}" class="image-preview d-none" alt="Product preview">
                         </div>
-                        <div class="form-text">Max 10MB. Formats: JPEG, PNG, WEBP.</div>
+                        <div class="form-text">Optional. If not uploaded, AI will generate from your prompt. Max 10MB. Formats: JPEG, PNG, WEBP.</div>
                     </div>
                 `;
 
@@ -679,11 +781,6 @@
                         return;
                     }
 
-                    if (!imageInput.files || !imageInput.files[0]) {
-                        showAlert(`Each product must include an image upload (product ${index + 1}).`, 'error');
-                        return;
-                    }
-
                     brief.products.push({
                         id: productId,
                         name: productName,
@@ -692,9 +789,19 @@
                         image_path: 'placeholder'
                     });
 
-                    const file = imageInput.files[0];
-                    const ext = file.name.includes('.') ? file.name.split('.').pop() : 'png';
-                    formData.append('product_images', file, `${productId}.${ext}`);
+                    // Product images are now optional - will be generated if missing
+                    if (imageInput.files && imageInput.files[0]) {
+                        const file = imageInput.files[0];
+                        const ext = file.name.includes('.') ? file.name.split('.').pop() : 'png';
+                        formData.append('product_images', file, `${productId}.${ext}`);
+                    }
+                }
+
+                // Add optional brand logo if uploaded
+                const manualBrandLogoInput = document.getElementById('manualBrandLogo');
+                if (manualBrandLogoInput && manualBrandLogoInput.files && manualBrandLogoInput.files[0]) {
+                    const logoFile = manualBrandLogoInput.files[0];
+                    formData.append('brand_logo', logoFile, logoFile.name || 'brand-logo.png');
                 }
 
                 formData.append('brief_json', JSON.stringify(brief));
@@ -724,25 +831,34 @@
                     return;
                 }
 
+                // Product images are now optional - will be generated if missing
                 for (const card of productCards) {
                     const productId = card.dataset.productId;
                     const fileInput = card.querySelector('input[type="file"]');
 
-                    if (!fileInput.files || !fileInput.files[0]) {
-                        showAlert(`Missing image for product ${productId}.`, 'error');
-                        return;
+                    if (fileInput.files && fileInput.files[0]) {
+                        const file = fileInput.files[0];
+                        const ext = file.name.includes('.') ? file.name.split('.').pop() : 'png';
+                        formData.append('product_images', file, `${productId}.${ext}`);
                     }
+                }
 
-                    const file = fileInput.files[0];
-                    const ext = file.name.includes('.') ? file.name.split('.').pop() : 'png';
-                    formData.append('product_images', file, `${productId}.${ext}`);
+                // Add optional brand logo if uploaded
+                const jsonBrandLogoInput = document.getElementById('jsonBrandLogo');
+                if (jsonBrandLogoInput && jsonBrandLogoInput.files && jsonBrandLogoInput.files[0]) {
+                    const logoFile = jsonBrandLogoInput.files[0];
+                    formData.append('brand_logo', logoFile, logoFile.name || 'brand-logo.png');
                 }
 
                 formData.append('brief_json', jsonText);
             }
 
-            document.getElementById('loadingIndicator').style.display = 'flex';
-            document.getElementById('submitBtn').disabled = true;
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const submitBtn = document.getElementById('submitBtn');
+
+            loadingIndicator.classList.remove('d-none');
+            loadingIndicator.classList.add('d-flex');
+            submitBtn.disabled = true;
 
             try {
                 const response = await fetch('/briefs', {
@@ -763,8 +879,9 @@
             } catch (error) {
                 showAlert(`❌ Network error: ${error.message}`, 'error');
             } finally {
-                document.getElementById('loadingIndicator').style.display = 'none';
-                document.getElementById('submitBtn').disabled = false;
+                loadingIndicator.classList.add('d-none');
+                loadingIndicator.classList.remove('d-flex');
+                submitBtn.disabled = false;
             }
         });
     </script>

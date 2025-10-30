@@ -1,0 +1,46 @@
+{
+  "campaign": "ai-generated-winter-2025",
+  "target_region": "North America",
+  "target_audience": "Tech-savvy millennials aged 25-40 interested in outdoor activities",
+  "locales": ["en-US", "es-MX", "fr-CA"],
+  "message": {
+    "en-US": "Winter Adventures Await",
+    "es-MX": "Aventuras de Invierno Te Esperan",
+    "fr-CA": "Les Aventures d'Hiver Vous Attendent"
+  },
+  "cta": {
+    "en-US": "Shop Now",
+    "es-MX": "Comprar Ahora",
+    "fr-CA": "Magasiner Maintenant"
+  },
+  "products": [
+    {
+      "id": "winter-jacket-pro",
+      "name": "Professional Winter Jacket",
+      "prompt": "A high-quality professional winter jacket in deep navy blue, shown on a clean white background, studio lighting, product photography style, sleek design with visible insulation",
+      "negative_prompt": "blurry, low quality, distorted, busy background, people, text, watermark",
+      "image_path": "placeholder"
+    },
+    {
+      "id": "thermal-gloves-elite",
+      "name": "Elite Thermal Gloves",
+      "prompt": "Premium black thermal gloves with touch-screen compatible fingertips, displayed on white background, detailed texture visible, studio product photography",
+      "negative_prompt": "blurry, low quality, distorted, hands wearing gloves, people, text",
+      "image_path": "placeholder"
+    },
+    {
+      "id": "insulated-boots",
+      "name": "Insulated Winter Boots",
+      "prompt": "Rugged insulated winter boots in tan/brown leather, side view on white background, professional product photography, high detail, waterproof construction visible",
+      "negative_prompt": "blurry, low quality, distorted, feet wearing boots, people, outdoor setting, text",
+      "image_path": "placeholder"
+    }
+  ],
+  "brand": {
+    "primary_hex": "#1E3A8A",
+    "secondary_hex": "#F59E0B",
+    "logo_path": "/brandlib/outdoor-gear-co/logo.png"
+  },
+  "aspect_ratios": ["1:1", "9:16", "16:9"],
+  "template": "bottom-cta@1.3.0"
+}

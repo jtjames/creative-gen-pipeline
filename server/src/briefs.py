@@ -35,7 +35,8 @@ class BriefService:
     def upload_brief(
         self,
         brief: CampaignBrief,
-        product_images: Optional[Dict[str, bytes]] = None
+        product_images: Optional[Dict[str, bytes]] = None,
+        brand_logo: Optional[tuple[str, bytes]] = None,
     ) -> BriefUploadResponse:
         """
         Upload a campaign brief to Dropbox storage.
@@ -43,12 +44,13 @@ class BriefService:
         Args:
             brief: Validated campaign brief to store
             product_images: Optional dict mapping product_id to image bytes
+            brand_logo: Optional tuple of original filename and image bytes for the brand logo
 
         Returns:
             Upload response with paths and metadata
 
         Raises:
-            ValueError: If product images are missing for any product
+            ValueError: If product images are missing for products that need them
             Exception: If upload fails
         """
         campaign_id = brief.campaign
@@ -59,34 +61,47 @@ class BriefService:
         self.storage.ensure_folder(campaign_folder)
         self.storage.ensure_folder(assets_folder)
 
+        def detect_image_extension(image_bytes: bytes, original_filename: Optional[str] = None) -> str:
+            if image_bytes[:2] == b'\xff\xd8':
+                return 'jpg'
+            if image_bytes[:8] == b'\x89PNG\r\n\x1a\n':
+                return 'png'
+            if image_bytes[:4] == b'RIFF' and image_bytes[8:12] == b'WEBP':
+                return 'webp'
+            if original_filename and '.' in original_filename:
+                return original_filename.rsplit('.', 1)[1].lower()
+            return 'jpg'
+
         # Upload product images if provided
         if product_images:
             for product in brief.products:
                 product_id = product.id
 
-                if product_id not in product_images:
-                    raise ValueError(f"Missing image for product: {product_id}")
+                if product_id in product_images:
+                    image_bytes = product_images[product_id]
+                    ext = detect_image_extension(image_bytes)
 
-                # Determine file extension from image bytes (basic check)
-                image_bytes = product_images[product_id]
-                if image_bytes[:2] == b'\xff\xd8':
-                    ext = 'jpg'
-                elif image_bytes[:8] == b'\x89PNG\r\n\x1a\n':
-                    ext = 'png'
-                elif image_bytes[:4] == b'RIFF' and image_bytes[8:12] == b'WEBP':
-                    ext = 'webp'
-                else:
-                    ext = 'jpg'  # default
+                    image_path = f"{assets_folder}/{product_id}.{ext}"
+                    self.storage.upload_image(
+                        path=image_path,
+                        data=image_bytes,
+                    )
 
-                # Upload image
-                image_path = f"{assets_folder}/{product_id}.{ext}"
+                    product.image_path = image_path
+                # If not in product_images, keep the placeholder set by the upload endpoint
+
+        if brand_logo:
+            original_filename, logo_bytes = brand_logo
+            if logo_bytes:
+                ext = detect_image_extension(logo_bytes, original_filename)
+                base_name = Path(original_filename).stem or 'brand-logo'
+                sanitized_base = base_name.replace(' ', '-').replace('/', '-')
+                brand_logo_path = f"{assets_folder}/{sanitized_base}.{ext}"
                 self.storage.upload_image(
-                    path=image_path,
-                    data=image_bytes,
+                    path=brand_logo_path,
+                    data=logo_bytes,
                 )
-
-                # Update product image_path to point to stored location
-                product.image_path = image_path
+                brief.brand.logo_path = brand_logo_path
 
         # Prepare brief JSON (with updated image paths)
         brief_json = brief.model_dump_json(indent=2)
