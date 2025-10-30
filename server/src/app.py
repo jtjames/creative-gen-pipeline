@@ -1,8 +1,6 @@
 """FastAPI application for the Creative Automation API scaffold."""
 from __future__ import annotations
 
-from typing import Callable
-
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
 import uvicorn
@@ -12,24 +10,14 @@ from .storage import DropboxStorage
 
 DEFAULT_PORT = 1854
 
-StorageFactory = Callable[[Settings], DropboxStorage]
-SettingsProvider = Callable[[], Settings]
+
+def build_storage(settings: Settings = Depends(get_settings)) -> DropboxStorage:
+    return DropboxStorage(settings=settings)
 
 
-def create_app(
-    *,
-    settings_provider: SettingsProvider = get_settings,
-    storage_factory: StorageFactory = lambda settings: DropboxStorage(settings=settings),
-) -> FastAPI:
-    """Application factory to allow functional dependency injection."""
+def create_app() -> FastAPI:
+    """Construct the FastAPI application using functional dependencies."""
     app = FastAPI(title="Creative Automation API")
-
-    def get_storage() -> DropboxStorage:
-        settings = settings_provider()
-        try:
-            return storage_factory(settings)
-        except RuntimeError as exc:  # pragma: no cover - defensive guard
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
 
     @app.get("/")
     async def root():  # pragma: no cover - trivial route
@@ -42,7 +30,7 @@ def create_app(
         return JSONResponse({"status": "ok"})
 
     @app.get("/storage/temporary-link")
-    async def temporary_link(path: str, storage: DropboxStorage = Depends(get_storage)):
+    async def temporary_link(path: str, storage: DropboxStorage = Depends(build_storage)):
         """Generate a temporary download link for a Dropbox file path."""
         try:
             link = storage.generate_temporary_link(path)

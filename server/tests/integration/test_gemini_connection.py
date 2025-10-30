@@ -3,8 +3,6 @@
 Requires a valid API key in the GEMINI_API_KEY environment variable.
 """
 from __future__ import annotations
-
-import os
 import sys
 from pathlib import Path
 

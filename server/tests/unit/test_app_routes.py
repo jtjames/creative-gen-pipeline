@@ -13,7 +13,7 @@ if str(SERVER_ROOT) not in sys.path:
 
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="dropbox.session")
 
-from src.app import create_app  # noqa: E402  pylint: disable=wrong-import-position
+from src.app import build_storage, create_app  # noqa: E402  pylint: disable=wrong-import-position
 
 
 class _DummyStorage:
@@ -22,7 +22,8 @@ class _DummyStorage:
 
 
 def test_root_endpoint_returns_greeting():
-    app = create_app(storage_factory=lambda _settings: _DummyStorage())
+    app = create_app()
+    app.dependency_overrides[build_storage] = lambda: _DummyStorage()
     client = TestClient(app)
 
     response = client.get("/")
@@ -31,7 +32,8 @@ def test_root_endpoint_returns_greeting():
 
 
 def test_temporary_link_endpoint_uses_storage():
-    app = create_app(storage_factory=lambda _settings: _DummyStorage())
+    app = create_app()
+    app.dependency_overrides[build_storage] = lambda: _DummyStorage()
     client = TestClient(app)
 
     response = client.get("/storage/temporary-link", params={"path": "demo.png"})
