@@ -10,7 +10,7 @@ import httpx
 
 from .config import Settings, get_settings
 
-DEFAULT_OPENAI_IMAGE_MODEL = "gpt-image-1"
+DEFAULT_OPENAI_IMAGE_MODEL = "dall-e-3"
 _DEFAULT_MIME_TYPE = "image/png"
 
 _ASPECT_RATIO_TO_SIZE: dict[str, str] = {
@@ -86,7 +86,17 @@ class OpenAIImageClient:
                 json=payload,
             )
 
-        response.raise_for_status()
+        if response.status_code != 200:
+            error_detail = response.text
+            try:
+                error_json = response.json()
+                error_detail = error_json.get("error", {}).get("message", error_detail)
+            except Exception:
+                pass
+            raise RuntimeError(
+                f"OpenAI API error ({response.status_code}): {error_detail}"
+            )
+
         data = response.json()
 
         try:

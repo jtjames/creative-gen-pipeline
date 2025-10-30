@@ -5,7 +5,7 @@ import json
 from typing import List
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, HTTPException, status, UploadFile, File, Form
+from fastapi import Depends, FastAPI, HTTPException, status, UploadFile, File, Form, BackgroundTasks
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
@@ -14,6 +14,8 @@ import uvicorn
 from .config import Settings, get_settings
 from .storage import DropboxStorage
 from .briefs import BriefService
+from .orchestrator import OrchestratorAgent
+from .assets import needs_generation
 from .models import (
     CampaignBrief,
     BriefUploadResponse,
@@ -29,6 +31,19 @@ def build_storage(settings: Settings = Depends(get_settings)) -> DropboxStorage:
 
 def build_brief_service(storage: DropboxStorage = Depends(build_storage)) -> BriefService:
     return BriefService(storage=storage)
+
+
+def build_orchestrator(
+    brief_service: BriefService = Depends(build_brief_service),
+    settings: Settings = Depends(get_settings),
+) -> OrchestratorAgent:
+    """Construct an orchestrator using the shared brief service and settings."""
+
+    return OrchestratorAgent(
+        brief_service=brief_service,
+        storage=brief_service.storage,
+        settings=settings,
+    )
 
 
 def create_app() -> FastAPI:
@@ -71,10 +86,12 @@ def create_app() -> FastAPI:
 
     @app.post("/briefs", response_model=BriefUploadResponse, status_code=status.HTTP_201_CREATED)
     async def upload_brief(
+        background_tasks: BackgroundTasks,
         brief_json: str = Form(..., description="Campaign brief JSON"),
         product_images: List[UploadFile] = File(default=[], description="Product images (optional - will generate if missing)"),
         brand_logo: UploadFile | None = File(None, description="Optional brand logo image"),
-        brief_service: BriefService = Depends(build_brief_service)
+        brief_service: BriefService = Depends(build_brief_service),
+        orchestrator: OrchestratorAgent = Depends(build_orchestrator),
     ):
         """
         Upload a new campaign brief with optional product images.
@@ -112,14 +129,17 @@ def create_app() -> FastAPI:
             # Mark products without images as needing generation
             # Products can either have uploaded images OR prompts for generation
             for product in brief.products:
-                if product.id not in product_image_map:
-                    # Verify product has a prompt for generation
+                if product.id in product_image_map:
+                    continue
+
+                if needs_generation(product.image_path):
                     if not product.prompt or not product.prompt.strip():
                         raise HTTPException(
                             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail=f"Product {product.id} must have either an uploaded image or a generation prompt"
+                            detail=(
+                                f"Product {product.id} must have either an uploaded image or a generation prompt"
+                            )
                         )
-                    # Set placeholder - orchestrator will generate
                     product.image_path = "pending-generation"
 
             # Read brand logo if provided
@@ -140,7 +160,30 @@ def create_app() -> FastAPI:
                 product_images=product_image_map if product_image_map else None,
                 brand_logo=brand_logo_data
             )
-            return response
+
+            # Check if any products need generation
+            has_pending_generation = any(
+                needs_generation(product.image_path) for product in brief.products
+            )
+
+            # If assets need generation, trigger it automatically in the background
+            if has_pending_generation:
+                campaign_id = response.campaign_id
+                background_tasks.add_task(
+                    orchestrator.generate_campaign,
+                    campaign_id
+                )
+                # Convert to dict to add new fields
+                response_dict = response.model_dump()
+                response_dict["generation_triggered"] = True
+                response_dict["message"] = f"Brief uploaded. Generating {sum(1 for p in brief.products if needs_generation(p.image_path))} missing product image(s) in background."
+                return response_dict
+            else:
+                # Convert to dict to add new fields
+                response_dict = response.model_dump()
+                response_dict["generation_triggered"] = False
+                response_dict["message"] = "Brief uploaded. All product images provided."
+                return response_dict
 
         except json.JSONDecodeError as exc:
             raise HTTPException(
@@ -150,7 +193,7 @@ def create_app() -> FastAPI:
         except ValidationError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=exc.errors()
+                detail=json.loads(exc.json())
             ) from exc
         except ValueError as exc:
             raise HTTPException(
@@ -205,6 +248,22 @@ def create_app() -> FastAPI:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to retrieve brief: {str(exc)}"
             ) from exc
+
+    @app.post("/api/generate")
+    async def trigger_generation(
+        campaign_id: str = Form(..., description="Campaign identifier to generate"),
+        orchestrator: OrchestratorAgent = Depends(build_orchestrator),
+    ):
+        """Kick off creative generation for a stored campaign brief."""
+
+        try:
+            return await orchestrator.generate_campaign(campaign_id)
+        except RuntimeError as exc:
+            detail = str(exc)
+            status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+            if "not found" in detail.lower():
+                status_code = status.HTTP_404_NOT_FOUND
+            raise HTTPException(status_code=status_code, detail=detail) from exc
 
     return app
 

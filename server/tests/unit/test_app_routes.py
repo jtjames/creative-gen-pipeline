@@ -13,7 +13,7 @@ if str(SERVER_ROOT) not in sys.path:
 
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="dropbox.session")
 
-from src.app import build_storage, create_app  # noqa: E402  pylint: disable=wrong-import-position
+from src.app import build_storage, build_orchestrator, create_app  # noqa: E402  pylint: disable=wrong-import-position
 
 
 class _DummyStorage:
@@ -28,7 +28,8 @@ def test_root_endpoint_returns_greeting():
 
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json() == {"message": "Creative Automation API says hello!"}
+    assert "text/html" in response.headers["content-type"]
+    assert "<!DOCTYPE html>" in response.text
 
 
 def test_temporary_link_endpoint_uses_storage():
@@ -39,3 +40,20 @@ def test_temporary_link_endpoint_uses_storage():
     response = client.get("/storage/temporary-link", params={"path": "demo.png"})
     assert response.status_code == 200
     assert response.json()["link"].endswith("demo.png")
+
+
+class _DummyOrchestrator:
+    async def generate_campaign(self, campaign_id: str) -> dict[str, str]:  # pragma: no cover - simple helper
+        return {"campaign_id": campaign_id, "status": "completed"}
+
+
+def test_generate_endpoint_triggers_orchestrator():
+    app = create_app()
+    app.dependency_overrides[build_storage] = lambda: _DummyStorage()
+    app.dependency_overrides[build_orchestrator] = lambda: _DummyOrchestrator()
+    client = TestClient(app)
+
+    response = client.post("/api/generate", data={"campaign_id": "demo-campaign"})
+
+    assert response.status_code == 200
+    assert response.json() == {"campaign_id": "demo-campaign", "status": "completed"}

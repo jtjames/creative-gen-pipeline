@@ -346,22 +346,37 @@
         }
 
         function syncColorInputs() {
+            // Sync primary color
             const colorPicker = document.getElementById('brandColor');
             const hexInput = document.getElementById('brandColorHex');
 
-            if (!colorPicker || !hexInput) {
-                return;
+            if (colorPicker && hexInput) {
+                colorPicker.addEventListener('input', () => {
+                    hexInput.value = colorPicker.value.toUpperCase();
+                });
+
+                hexInput.addEventListener('input', () => {
+                    if (/^#[0-9A-Fa-f]{6}$/.test(hexInput.value)) {
+                        colorPicker.value = hexInput.value;
+                    }
+                });
             }
 
-            colorPicker.addEventListener('input', () => {
-                hexInput.value = colorPicker.value.toUpperCase();
-            });
+            // Sync secondary color
+            const secondaryColorPicker = document.getElementById('brandSecondaryColor');
+            const secondaryHexInput = document.getElementById('brandSecondaryHex');
 
-            hexInput.addEventListener('input', () => {
-                if (/^#[0-9A-Fa-f]{6}$/.test(hexInput.value)) {
-                    colorPicker.value = hexInput.value;
-                }
-            });
+            if (secondaryColorPicker && secondaryHexInput) {
+                secondaryColorPicker.addEventListener('input', () => {
+                    secondaryHexInput.value = secondaryColorPicker.value.toUpperCase();
+                });
+
+                secondaryHexInput.addEventListener('input', () => {
+                    if (/^#[0-9A-Fa-f]{6}$/.test(secondaryHexInput.value)) {
+                        secondaryColorPicker.value = secondaryHexInput.value;
+                    }
+                });
+            }
         }
 
         function generateLocaleFields() {
@@ -727,11 +742,23 @@
                 const templateValue = document.getElementById('template').value.trim();
                 const targetAudienceValue = document.getElementById('targetAudience').value.trim();
                 const brandColorHexValue = document.getElementById('brandColorHex').value.trim();
+                const brandSecondaryHexValue = document.getElementById('brandSecondaryHex').value.trim();
                 const logoPathValue = document.getElementById('logoPath').value.trim();
 
                 if (!campaignValue || !targetRegionValue || !templateValue || !targetAudienceValue || !brandColorHexValue || !logoPathValue) {
                     showAlert('Please complete the campaign details (ID, region, template, audience, brand color, logo path).', 'error');
                     return;
+                }
+
+                // Build brand object with optional secondary color
+                const brand = {
+                    primary_hex: brandColorHexValue,
+                    logo_path: logoPathValue
+                };
+
+                // Add secondary color if provided and valid
+                if (brandSecondaryHexValue && /^#[0-9A-Fa-f]{6}$/.test(brandSecondaryHexValue)) {
+                    brand.secondary_hex = brandSecondaryHexValue;
                 }
 
                 const brief = {
@@ -742,10 +769,7 @@
                     message: {},
                     cta: {},
                     products: [],
-                    brand: {
-                        primary_hex: brandColorHexValue,
-                        logo_path: logoPathValue
-                    },
+                    brand: brand,
                     aspect_ratios: aspectRatios,
                     template: templateValue
                 };

@@ -108,6 +108,8 @@ class BriefUploadResponse(BaseModel):
     metadata_path: str = Field(..., description="Dropbox path to metadata")
     uploaded_at: datetime = Field(..., description="Upload timestamp")
     status: str = Field(..., description="Brief status")
+    generation_triggered: Optional[bool] = Field(None, description="Whether automatic generation was triggered")
+    message: Optional[str] = Field(None, description="Status message about upload and generation")
 
 
 class BriefListItem(BaseModel):

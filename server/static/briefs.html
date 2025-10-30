@@ -98,6 +98,37 @@
             failed: 'badge bg-danger-subtle text-danger-emphasis status-badge'
         };
 
+        const assetPlaceholderTokens = ['placeholder', 'pending', 'pending-generation'];
+        const MAX_PRODUCT_IMAGES = 2;
+
+        function hasAssetPath(path) {
+            if (!path || typeof path !== 'string') {
+                return false;
+            }
+
+            const normalized = path.trim().toLowerCase();
+            if (!normalized) {
+                return false;
+            }
+
+            return !assetPlaceholderTokens.some(token => normalized.includes(token));
+        }
+
+        async function getTemporaryLink(dropboxPath) {
+            try {
+                const response = await fetch(`/storage/temporary-link?path=${encodeURIComponent(dropboxPath)}`);
+                if (!response.ok) {
+                    console.error(`Failed to get temporary link for ${dropboxPath}`);
+                    return null;
+                }
+                const data = await response.json();
+                return data.link;
+            } catch (error) {
+                console.error(`Error fetching temporary link for ${dropboxPath}:`, error);
+                return null;
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const bootstrapGlobal = window.bootstrap;
             const modalElement = document.getElementById('briefModal');
@@ -195,6 +226,63 @@
 
                 const brief = await response.json();
 
+                const productImageEntries = brief.products
+                    .map(product => ({
+                        id: product.id,
+                        name: product.name,
+                        path: product.image_path
+                    }))
+                    .filter(item => hasAssetPath(item.path))
+                    .slice(0, MAX_PRODUCT_IMAGES);
+
+                // Fetch temporary links for all product images
+                const productImagesWithLinks = await Promise.all(
+                    productImageEntries.map(async (entry) => {
+                        const tempLink = await getTemporaryLink(entry.path);
+                        return { ...entry, tempLink };
+                    })
+                );
+
+                const productImagesMarkup = productImagesWithLinks
+                    .filter(entry => entry.tempLink) // Only show images that have valid links
+                    .map(({ id, name, tempLink }) => {
+                        const label = name || id || 'Product';
+                        const caption = name && id ? `${name} (${id})` : label;
+                        return `
+                            <figure class="mb-0 text-center">
+                                <div class="ratio ratio-1x1 rounded border bg-white shadow-sm overflow-hidden" style="width: 140px;">
+                                    <img src="${escapeHtml(tempLink)}" alt="${escapeHtml(label)} image" class="object-fit-cover w-100 h-100" loading="lazy">
+                                </div>
+                                <figcaption class="small text-secondary mt-2 text-truncate" title="${escapeHtml(caption)}">${escapeHtml(label)}</figcaption>
+                            </figure>
+                        `;
+                    }).join('');
+
+                const productImagesSection = productImageEntries.length ? `
+                    <section class="mb-4">
+                        <h3 class="h6 text-uppercase text-secondary fw-semibold">Product Images</h3>
+                        <div class="d-flex flex-wrap gap-3">
+                            ${productImagesMarkup}
+                        </div>
+                    </section>
+                ` : '';
+
+                const logoPath = brief.brand && brief.brand.logo_path;
+                const hasLogoImage = hasAssetPath(logoPath);
+
+                // Fetch temporary link for logo if it exists
+                const logoTempLink = hasLogoImage ? await getTemporaryLink(logoPath) : null;
+
+                // Only show logo section if there's a valid logo image
+                const brandLogoMarkup = logoTempLink
+                    ? `
+                        <div class="ms-auto d-flex flex-column align-items-start">
+                            <div class="small text-secondary">Logo</div>
+                            <img src="${escapeHtml(logoTempLink)}" alt="Brand logo" class="rounded border bg-white shadow-sm" style="max-height: 64px; width: auto;" loading="lazy">
+                        </div>
+                    `
+                    : '';
+
                 document.getElementById('modalTitle').textContent = `Campaign: ${brief.campaign}`;
 
                 const localizedMessages = brief.locales.map(locale => `
@@ -228,15 +316,17 @@
 
                     <section class="mb-4">
                         <h3 class="h6 text-uppercase text-secondary fw-semibold">Brand Identity</h3>
-                        <div class="d-flex align-items-center gap-3">
+                        <div class="d-flex flex-wrap align-items-center gap-3">
                             <div class="rounded-circle" style="width: 32px; height: 32px; background:${brief.brand.primary_hex}; border:1px solid rgba(15,23,42,0.1);"></div>
                             <div>
                                 <div class="small text-secondary">Primary Hex</div>
                                 <div class="fw-semibold">${brief.brand.primary_hex}</div>
                             </div>
-                            <div class="ms-auto text-secondary small">Logo: ${brief.brand.logo_path}</div>
+                            ${brandLogoMarkup}
                         </div>
                     </section>
+
+                    ${productImagesSection}
 
                     <section class="mb-4">
                         <h3 class="h6 text-uppercase text-secondary fw-semibold">Localized Messages</h3>

@@ -17,6 +17,7 @@ from .models import (
     BriefUploadResponse,
     BriefListItem,
 )
+from .assets import needs_generation
 
 
 class BriefService:
@@ -72,23 +73,26 @@ class BriefService:
                 return original_filename.rsplit('.', 1)[1].lower()
             return 'jpg'
 
-        # Upload product images if provided
-        if product_images:
-            for product in brief.products:
-                product_id = product.id
+        provided_images = product_images or {}
 
-                if product_id in product_images:
-                    image_bytes = product_images[product_id]
-                    ext = detect_image_extension(image_bytes)
+        for product in brief.products:
+            product_id = product.id
 
-                    image_path = f"{assets_folder}/{product_id}.{ext}"
-                    self.storage.upload_image(
-                        path=image_path,
-                        data=image_bytes,
-                    )
+            if product_id in provided_images:
+                image_bytes = provided_images[product_id]
+                ext = detect_image_extension(image_bytes)
 
-                    product.image_path = image_path
-                # If not in product_images, keep the placeholder set by the upload endpoint
+                image_path = f"{assets_folder}/{product_id}.{ext}"
+                self.storage.upload_image(
+                    path=image_path,
+                    data=image_bytes,
+                )
+
+                product.image_path = image_path
+                continue
+
+            if needs_generation(product.image_path):
+                product.image_path = "pending-generation"
 
         if brand_logo:
             original_filename, logo_bytes = brand_logo
