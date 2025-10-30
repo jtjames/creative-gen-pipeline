@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Campaign Brief - Creative Automation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .form-content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            color: #555;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-group label .required {
+            color: #e74c3c;
+        }
+
+        .form-group input[type="text"],
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .locale-group {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .locale-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .locale-code {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .product-card {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .product-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .btn-remove {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+
+        .btn-remove:hover {
+            background: #c0392b;
+        }
+
+        .btn-add {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.3s;
+        }
+
+        .btn-add:hover {
+            background: #229954;
+        }
+
+        .file-upload-wrapper {
+            position: relative;
+            margin-top: 10px;
+        }
+
+        .file-upload-label {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .file-upload-label:hover {
+            background: #5568d3;
+        }
+
+        .file-upload-input {
+            display: none;
+        }
+
+        .file-name {
+            display: inline-block;
+            margin-left: 10px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .image-preview {
+            margin-top: 10px;
+            max-width: 200px;
+            border-radius: 6px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .checkbox-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .submit-section {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-submit:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .alert.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .alert.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        .color-preview {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            border: 2px solid #ddd;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Campaign Brief Upload</h1>
+            <p>Create a new campaign brief with product images for creative generation</p>
+        </div>
+
+        <div class="form-content">
+            <div id="alertContainer"></div>
+
+            <form id="briefForm">
+                <!-- Campaign Details Section -->
+                <div class="section">
+                    <h2 class="section-title">Campaign Details</h2>
+
+                    <div class="form-group">
+                        <label>Campaign ID <span class="required">*</span></label>
+                        <input type="text" id="campaign" name="campaign" required placeholder="e.g., summer-2025-promo">
+                        <div class="help-text">Unique identifier for this campaign</div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Target Region <span class="required">*</span></label>
+                            <input type="text" id="targetRegion" name="targetRegion" required placeholder="e.g., North America">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Template Version <span class="required">*</span></label>
+                            <input type="text" id="template" name="template" required placeholder="e.g., bottom-cta@1.3.0" pattern="[\w-]+@\d+\.\d+\.\d+">
+                            <div class="help-text">Format: name@major.minor.patch</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Target Audience <span class="required">*</span></label>
+                        <textarea id="targetAudience" name="targetAudience" required placeholder="e.g., Young professionals aged 25-35 interested in tech"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Aspect Ratios <span class="required">*</span></label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="ratio_1_1" value="1:1">
+                                <label for="ratio_1_1">1:1 (Square)</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="ratio_9_16" value="9:16">
+                                <label for="ratio_9_16">9:16 (Stories)</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="ratio_16_9" value="16:9">
+                                <label for="ratio_16_9">16:9 (Landscape)</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Locales & Messaging Section -->
+                <div class="section">
+                    <h2 class="section-title">Locales & Messaging</h2>
+
+                    <div class="form-group">
+                        <label>Locales <span class="required">*</span></label>
+                        <input type="text" id="localesInput" placeholder="e.g., en-US, es-MX, fr-CA">
+                        <div class="help-text">Enter locale codes separated by commas</div>
+                        <button type="button" class="btn-add" onclick="generateLocaleFields()" style="margin-top: 10px;">
+                            <span>➕</span> Generate Locale Fields
+                        </button>
+                    </div>
+
+                    <div id="localeFieldsContainer"></div>
+                </div>
+
+                <!-- Products Section -->
+                <div class="section">
+                    <h2 class="section-title">Products</h2>
+                    <div class="help-text" style="margin-bottom: 15px;">Minimum 2 products required. Each product must have an image.</div>
+
+                    <div id="productsContainer">
+                        <!-- Products will be added here dynamically -->
+                    </div>
+
+                    <button type="button" class="btn-add" onclick="addProduct()">
+                        <span>➕</span> Add Product
+                    </button>
+                </div>
+
+                <!-- Brand Section -->
+                <div class="section">
+                    <h2 class="section-title">Brand Identity</h2>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Primary Brand Color <span class="required">*</span></label>
+                            <input type="color" id="brandColor" name="brandColor" value="#FF5733" style="height: 50px;">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Brand Color Hex <span class="required">*</span></label>
+                            <input type="text" id="brandColorHex" name="brandColorHex" value="#FF5733" pattern="^#[0-9A-Fa-f]{6}$" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Logo Path <span class="required">*</span></label>
+                        <input type="text" id="logoPath" name="logoPath" required placeholder="/brandlib/acme/logo.png">
+                        <div class="help-text">Path to logo in brand library</div>
+                    </div>
+                </div>
+
+                <!-- Submit Section -->
+                <div class="submit-section">
+                    <div class="loading" id="loadingIndicator">
+                        <div class="spinner"></div>
+                        <p style="margin-top: 10px;">Uploading brief and images...</p>
+                    </div>
+
+                    <button type="submit" class="btn-submit" id="submitBtn">
+                        🚀 Upload Campaign Brief
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let productCount = 0;
+        let locales = [];
+
+        // Initialize form with 2 products
+        window.onload = function() {
+            addProduct();
+            addProduct();
+            syncColorInputs();
+        };
+
+        // Sync color picker and hex input
+        document.getElementById('brandColor').addEventListener('input', function(e) {
+            document.getElementById('brandColorHex').value = e.target.value.toUpperCase();
+        });
+
+        document.getElementById('brandColorHex').addEventListener('input', function(e) {
+            const hex = e.target.value;
+            if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+                document.getElementById('brandColor').value = hex;
+            }
+        });
+
+        function syncColorInputs() {
+            const colorPicker = document.getElementById('brandColor');
+            const hexInput = document.getElementById('brandColorHex');
+
+            colorPicker.addEventListener('input', function() {
+                hexInput.value = this.value.toUpperCase();
+            });
+
+            hexInput.addEventListener('input', function() {
+                if (/^#[0-9A-Fa-f]{6}$/.test(this.value)) {
+                    colorPicker.value = this.value;
+                }
+            });
+        }
+
+        function generateLocaleFields() {
+            const input = document.getElementById('localesInput').value;
+            locales = input.split(',').map(l => l.trim()).filter(l => l);
+
+            if (locales.length === 0) {
+                showAlert('Please enter at least one locale code', 'error');
+                return;
+            }
+
+            const container = document.getElementById('localeFieldsContainer');
+            container.innerHTML = '';
+
+            locales.forEach(locale => {
+                const localeDiv = document.createElement('div');
+                localeDiv.className = 'locale-group';
+                localeDiv.innerHTML = `
+                    <div class="locale-header">
+                        <span class="locale-code">${locale}</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Headline Message</label>
+                        <input type="text" id="message_${locale}" placeholder="Headline for ${locale}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Call to Action</label>
+                        <input type="text" id="cta_${locale}" placeholder="CTA for ${locale}" required>
+                    </div>
+                `;
+                container.appendChild(localeDiv);
+            });
+
+            showAlert(`Generated fields for ${locales.length} locale(s)`, 'success');
+        }
+
+        function addProduct() {
+            productCount++;
+            const container = document.getElementById('productsContainer');
+
+            const productCard = document.createElement('div');
+            productCard.className = 'product-card';
+            productCard.id = `product_${productCount}`;
+
+            productCard.innerHTML = `
+                <div class="product-header">
+                    <span class="product-title">Product ${productCount}</span>
+                    ${productCount > 2 ? `<button type="button" class="btn-remove" onclick="removeProduct(${productCount})">Remove</button>` : ''}
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Product ID <span class="required">*</span></label>
+                        <input type="text" id="product_id_${productCount}" required placeholder="e.g., wh-9000">
+                    </div>
+                    <div class="form-group">
+                        <label>Product Name <span class="required">*</span></label>
+                        <input type="text" id="product_name_${productCount}" required placeholder="e.g., Wireless Headphones">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Generation Prompt <span class="required">*</span></label>
+                    <textarea id="product_prompt_${productCount}" required placeholder="Describe the desired image..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Negative Prompt (Optional)</label>
+                    <textarea id="product_negative_${productCount}" placeholder="What to avoid in the image..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Product Image <span class="required">*</span></label>
+                    <div class="file-upload-wrapper">
+                        <label for="product_image_${productCount}" class="file-upload-label">
+                            📁 Choose Image
+                        </label>
+                        <input type="file" id="product_image_${productCount}" class="file-upload-input"
+                               accept="image/jpeg,image/png,image/webp" required onchange="handleImageUpload(${productCount})">
+                        <span class="file-name" id="filename_${productCount}">No file chosen</span>
+                    </div>
+                    <img id="preview_${productCount}" class="image-preview" style="display: none;">
+                    <div class="help-text">Max 10MB. Formats: JPEG, PNG, WEBP</div>
+                </div>
+            `;
+
+            container.appendChild(productCard);
+        }
+
+        function removeProduct(id) {
+            const product = document.getElementById(`product_${id}`);
+            if (product) {
+                product.remove();
+            }
+        }
+
+        function handleImageUpload(productId) {
+            const input = document.getElementById(`product_image_${productId}`);
+            const filenameSpan = document.getElementById(`filename_${productId}`);
+            const preview = document.getElementById(`preview_${productId}`);
+
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+
+                // Check file size (10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    showAlert('Image must be less than 10MB', 'error');
+                    input.value = '';
+                    filenameSpan.textContent = 'No file chosen';
+                    preview.style.display = 'none';
+                    return;
+                }
+
+                filenameSpan.textContent = file.name;
+
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function showAlert(message, type) {
+            const container = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert ${type}`;
+            alert.textContent = message;
+            container.appendChild(alert);
+
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        // Form submission
+        document.getElementById('briefForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // Validate aspect ratios
+            const aspectRatios = [];
+            if (document.getElementById('ratio_1_1').checked) aspectRatios.push('1:1');
+            if (document.getElementById('ratio_9_16').checked) aspectRatios.push('9:16');
+            if (document.getElementById('ratio_16_9').checked) aspectRatios.push('16:9');
+
+            if (aspectRatios.length === 0) {
+                showAlert('Please select at least one aspect ratio', 'error');
+                return;
+            }
+
+            // Validate locales
+            if (locales.length === 0) {
+                showAlert('Please generate locale fields first', 'error');
+                return;
+            }
+
+            // Build brief JSON
+            const brief = {
+                campaign: document.getElementById('campaign').value,
+                target_region: document.getElementById('targetRegion').value,
+                target_audience: document.getElementById('targetAudience').value,
+                locales: locales,
+                message: {},
+                cta: {},
+                products: [],
+                brand: {
+                    primary_hex: document.getElementById('brandColorHex').value,
+                    logo_path: document.getElementById('logoPath').value
+                },
+                aspect_ratios: aspectRatios,
+                template: document.getElementById('template').value
+            };
+
+            // Add locale messages and CTAs
+            locales.forEach(locale => {
+                brief.message[locale] = document.getElementById(`message_${locale}`).value;
+                brief.cta[locale] = document.getElementById(`cta_${locale}`).value;
+            });
+
+            // Add products
+            const productCards = document.querySelectorAll('.product-card');
+            let hasAllImages = true;
+
+            productCards.forEach((card, index) => {
+                const id = card.id.split('_')[1];
+                const productId = document.getElementById(`product_id_${id}`).value;
+                const imageInput = document.getElementById(`product_image_${id}`);
+
+                if (!imageInput.files || !imageInput.files[0]) {
+                    hasAllImages = false;
+                    showAlert(`Product ${index + 1} is missing an image`, 'error');
+                    return;
+                }
+
+                brief.products.push({
+                    id: productId,
+                    name: document.getElementById(`product_name_${id}`).value,
+                    prompt: document.getElementById(`product_prompt_${id}`).value,
+                    negative_prompt: document.getElementById(`product_negative_${id}`).value || undefined,
+                    image_path: "placeholder"
+                });
+            });
+
+            if (!hasAllImages) return;
+
+            if (brief.products.length < 2) {
+                showAlert('Minimum 2 products required', 'error');
+                return;
+            }
+
+            // Create FormData
+            const formData = new FormData();
+            formData.append('brief_json', JSON.stringify(brief));
+
+            // Add product images
+            productCards.forEach(card => {
+                const id = card.id.split('_')[1];
+                const productId = document.getElementById(`product_id_${id}`).value;
+                const imageInput = document.getElementById(`product_image_${id}`);
+
+                if (imageInput.files && imageInput.files[0]) {
+                    formData.append('product_images', imageInput.files[0], `${productId}.${imageInput.files[0].name.split('.').pop()}`);
+                }
+            });
+
+            // Show loading
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('submitBtn').disabled = true;
+
+            try {
+                const response = await fetch('/briefs', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert(`✅ Campaign brief uploaded successfully! ID: ${result.campaign_id}`, 'success');
+                    // Optionally reset form or redirect
+                    setTimeout(() => {
+                        window.location.href = '/briefs.html';
+                    }, 2000);
+                } else {
+                    showAlert(`❌ Error: ${result.detail || 'Upload failed'}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`❌ Network error: ${error.message}`, 'error');
+            } finally {
+                document.getElementById('loadingIndicator').style.display = 'none';
+                document.getElementById('submitBtn').disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

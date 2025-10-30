@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creative Automation System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .hero {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+        }
+
+        .hero h1 {
+            font-size: 48px;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .hero p {
+            font-size: 20px;
+            opacity: 0.95;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 35px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s, box-shadow 0.3s;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+        }
+
+        .card-description {
+            font-size: 15px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .card-action {
+            display: inline-block;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: opacity 0.3s;
+        }
+
+        .card:hover .card-action {
+            opacity: 0.9;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            color: white;
+            opacity: 0.9;
+        }
+
+        .footer a {
+            color: white;
+            text-decoration: underline;
+            margin: 0 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="hero">
+            <h1>🎨 Creative Automation</h1>
+            <p>Turn campaign briefs into on-brand social creatives at scale</p>
+        </div>
+
+        <div class="cards">
+            <a href="/upload-brief.html" class="card">
+                <div class="card-icon">📤</div>
+                <h2 class="card-title">Upload Campaign Brief</h2>
+                <p class="card-description">
+                    Create a new campaign brief with product images.
+                    Fill out the form and upload product photos to generate
+                    localized social media creatives.
+                </p>
+                <span class="card-action">Create Brief →</span>
+            </a>
+
+            <a href="/briefs.html" class="card">
+                <div class="card-icon">📋</div>
+                <h2 class="card-title">View Campaign Briefs</h2>
+                <p class="card-description">
+                    Browse all uploaded campaign briefs.
+                    View details, check status, and access generated
+                    creative assets.
+                </p>
+                <span class="card-action">View Briefs →</span>
+            </a>
+
+            <a href="/docs" class="card">
+                <div class="card-icon">📚</div>
+                <h2 class="card-title">API Documentation</h2>
+                <p class="card-description">
+                    Explore the REST API endpoints for programmatic access.
+                    View interactive Swagger UI documentation and test
+                    API calls.
+                </p>
+                <span class="card-action">View API Docs →</span>
+            </a>
+        </div>
+
+        <div class="footer">
+            <p>
+                <a href="/health">Health Check</a> |
+                <a href="https://github.com/anthropics/claude-code">Powered by Claude Code</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

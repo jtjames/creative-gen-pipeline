@@ -67,6 +67,16 @@ class DropboxStorage:
         self._client.files_upload(data, full_path, mode=mode)
         return StorageArtifact(path=full_path)
 
+    def download_bytes(self, path: str) -> bytes:
+        """Download file contents from Dropbox as bytes."""
+        full_path = self._full_path(path)
+        try:
+            metadata, response = self._client.files_download(full_path)
+            return response.content
+        except ApiError as exc:
+            logger.error("Failed to download %s: %s", full_path, exc)
+            raise RuntimeError(f"Unable to download file from Dropbox: {path}") from exc
+
     def upload_image(
         self,
         *,
