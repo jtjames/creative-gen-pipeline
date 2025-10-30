@@ -99,7 +99,7 @@
             <div class="card-body pt-4">
                 <div id="alertContainer" class="mb-4"></div>
 
-                <form id="briefForm">
+                <form id="briefForm" novalidate>
                     <div class="mb-4">
                         <span class="form-label d-block mb-2">Brief Input Mode</span>
                         <div class="btn-group" role="group" aria-label="Brief input mode toggle">
@@ -117,25 +117,25 @@
 
                         <div class="mb-3">
                             <label class="form-label" for="campaign">Campaign ID <span class="text-danger">*</span></label>
-                            <input class="form-control" type="text" id="campaign" name="campaign" required placeholder="e.g., summer-2025-promo">
+                            <input class="form-control" type="text" id="campaign" name="campaign" placeholder="e.g., summer-2025-promo">
                             <div class="form-text">Unique identifier for this campaign.</div>
                         </div>
 
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label" for="targetRegion">Target Region <span class="text-danger">*</span></label>
-                                <input class="form-control" type="text" id="targetRegion" name="targetRegion" required placeholder="e.g., North America">
+                                <input class="form-control" type="text" id="targetRegion" name="targetRegion" placeholder="e.g., North America">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="template">Template Version <span class="text-danger">*</span></label>
-                                <input class="form-control" type="text" id="template" name="template" required placeholder="e.g., bottom-cta@1.3.0" pattern="[\w-]+@\d+\.\d+\.\d+">
+                                <input class="form-control" type="text" id="template" name="template" placeholder="e.g., bottom-cta@1.3.0" pattern="[\w-]+@\d+\.\d+\.\d+">
                                 <div class="form-text">Format: name@major.minor.patch</div>
                             </div>
                         </div>
 
                         <div class="mt-3">
                             <label class="form-label" for="targetAudience">Target Audience <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="targetAudience" name="targetAudience" rows="3" required placeholder="e.g., Young professionals aged 25-35 interested in tech"></textarea>
+                            <textarea class="form-control" id="targetAudience" name="targetAudience" rows="3" placeholder="e.g., Young professionals aged 25-35 interested in tech"></textarea>
                         </div>
 
                         <div class="mt-4">
@@ -194,13 +194,13 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="brandColorHex">Brand Color Hex <span class="text-danger">*</span></label>
-                                <input class="form-control" type="text" id="brandColorHex" name="brandColorHex" value="#FF5733" pattern="^#[0-9A-Fa-f]{6}$" required>
+                                <input class="form-control" type="text" id="brandColorHex" name="brandColorHex" value="#FF5733" pattern="^#[0-9A-Fa-f]{6}$">
                             </div>
                         </div>
 
                         <div class="mt-3">
                             <label class="form-label" for="logoPath">Logo Path <span class="text-danger">*</span></label>
-                            <input class="form-control" type="text" id="logoPath" name="logoPath" required placeholder="/brandlib/acme/logo.png">
+                            <input class="form-control" type="text" id="logoPath" name="logoPath" placeholder="/brandlib/acme/logo.png">
                             <div class="form-text">Path to logo in brand library.</div>
                         </div>
                     </section>
@@ -246,7 +246,7 @@
                         </div>
 
                         <button type="submit" class="btn btn-primary btn-lg w-100" id="submitBtn">
-                            🚀 Upload Campaign Brief
+                            Upload Campaign Brief
                         </button>
                     </section>
                 </form>
@@ -337,11 +337,11 @@
                     </div>
                     <div class="form-group mb-3">
                         <label class="form-label">Headline Message</label>
-                        <input class="form-control" type="text" id="message_${locale}" placeholder="Headline for ${locale}" required>
+                        <input class="form-control" type="text" id="message_${locale}" placeholder="Headline for ${locale}">
                     </div>
                     <div class="form-group mb-0">
                         <label class="form-label">Call to Action</label>
-                        <input class="form-control" type="text" id="cta_${locale}" placeholder="CTA for ${locale}" required>
+                        <input class="form-control" type="text" id="cta_${locale}" placeholder="CTA for ${locale}">
                     </div>
                 `;
                 container.appendChild(localeDiv);
@@ -369,20 +369,20 @@
                     <div class="col-md-6">
                         <div class="form-group">
                             <label class="form-label">Product ID <span class="text-danger">*</span></label>
-                            <input class="form-control" type="text" id="product_id_${productCount}" required placeholder="e.g., wh-9000">
+                            <input class="form-control" type="text" id="product_id_${productCount}" placeholder="e.g., wh-9000">
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
                             <label class="form-label">Product Name <span class="text-danger">*</span></label>
-                            <input class="form-control" type="text" id="product_name_${productCount}" required placeholder="e.g., Wireless Headphones">
+                            <input class="form-control" type="text" id="product_name_${productCount}" placeholder="e.g., Wireless Headphones">
                         </div>
                     </div>
                 </div>
 
                 <div class="form-group mt-3">
                     <label class="form-label">Generation Prompt <span class="text-danger">*</span></label>
-                    <textarea class="form-control" id="product_prompt_${productCount}" rows="3" required placeholder="Describe the desired image..."></textarea>
+                    <textarea class="form-control" id="product_prompt_${productCount}" rows="3" placeholder="Describe the desired image..."></textarea>
                 </div>
 
                 <div class="form-group mt-3">
@@ -397,7 +397,7 @@
                             📁 Choose Image
                         </label>
                         <input type="file" id="product_image_${productCount}" class="file-upload-input d-none manual-product-image"
-                               accept="image/jpeg,image/png,image/webp" required onchange="handleManualImageUpload(${productCount})">
+                               accept="image/jpeg,image/png,image/webp" onchange="handleManualImageUpload(${productCount})">
                         <span class="file-name small" id="filename_${productCount}">No file chosen</span>
                     </div>
                     <div class="mt-3">
@@ -456,6 +456,7 @@
                 parsedJsonBrief = null;
                 document.getElementById('jsonPreview').innerHTML = '';
                 document.getElementById('jsonProductsContainer').innerHTML = '';
+                loadJsonBrief();
             };
             reader.readAsText(file);
         }
@@ -619,26 +620,44 @@
                     return;
                 }
 
+                const campaignValue = document.getElementById('campaign').value.trim();
+                const targetRegionValue = document.getElementById('targetRegion').value.trim();
+                const templateValue = document.getElementById('template').value.trim();
+                const targetAudienceValue = document.getElementById('targetAudience').value.trim();
+                const brandColorHexValue = document.getElementById('brandColorHex').value.trim();
+                const logoPathValue = document.getElementById('logoPath').value.trim();
+
+                if (!campaignValue || !targetRegionValue || !templateValue || !targetAudienceValue || !brandColorHexValue || !logoPathValue) {
+                    showAlert('Please complete the campaign details (ID, region, template, audience, brand color, logo path).', 'error');
+                    return;
+                }
+
                 const brief = {
-                    campaign: document.getElementById('campaign').value,
-                    target_region: document.getElementById('targetRegion').value,
-                    target_audience: document.getElementById('targetAudience').value,
+                    campaign: campaignValue,
+                    target_region: targetRegionValue,
+                    target_audience: targetAudienceValue,
                     locales: locales,
                     message: {},
                     cta: {},
                     products: [],
                     brand: {
-                        primary_hex: document.getElementById('brandColorHex').value,
-                        logo_path: document.getElementById('logoPath').value
+                        primary_hex: brandColorHexValue,
+                        logo_path: logoPathValue
                     },
                     aspect_ratios: aspectRatios,
-                    template: document.getElementById('template').value
+                    template: templateValue
                 };
 
-                locales.forEach(locale => {
-                    brief.message[locale] = document.getElementById(`message_${locale}`).value;
-                    brief.cta[locale] = document.getElementById(`cta_${locale}`).value;
-                });
+                for (const locale of locales) {
+                    const messageValue = document.getElementById(`message_${locale}`).value.trim();
+                    const ctaValue = document.getElementById(`cta_${locale}`).value.trim();
+                    if (!messageValue || !ctaValue) {
+                        showAlert(`Please provide messaging and CTA for locale ${locale}.`, 'error');
+                        return;
+                    }
+                    brief.message[locale] = messageValue;
+                    brief.cta[locale] = ctaValue;
+                }
 
                 const productCards = document.querySelectorAll('#manualProductsContainer .product-card');
                 if (productCards.length < 2) {
@@ -646,21 +665,30 @@
                     return;
                 }
 
-                for (const card of productCards) {
+                for (let index = 0; index < productCards.length; index++) {
+                    const card = productCards[index];
                     const id = card.id.split('_')[2];
-                    const productId = document.getElementById(`product_id_${id}`).value;
+                    const productId = document.getElementById(`product_id_${id}`).value.trim();
+                    const productName = document.getElementById(`product_name_${id}`).value.trim();
+                    const productPrompt = document.getElementById(`product_prompt_${id}`).value.trim();
+                    const productNegative = document.getElementById(`product_negative_${id}`).value.trim();
                     const imageInput = document.getElementById(`product_image_${id}`);
 
+                    if (!productId || !productName || !productPrompt) {
+                        showAlert(`Please complete the product details for product ${index + 1}.`, 'error');
+                        return;
+                    }
+
                     if (!imageInput.files || !imageInput.files[0]) {
-                        showAlert('Each product must include an image upload.', 'error');
+                        showAlert(`Each product must include an image upload (product ${index + 1}).`, 'error');
                         return;
                     }
 
                     brief.products.push({
                         id: productId,
-                        name: document.getElementById(`product_name_${id}`).value,
-                        prompt: document.getElementById(`product_prompt_${id}`).value,
-                        negative_prompt: document.getElementById(`product_negative_${id}`).value || undefined,
+                        name: productName,
+                        prompt: productPrompt,
+                        negative_prompt: productNegative || undefined,
                         image_path: 'placeholder'
                     });
 

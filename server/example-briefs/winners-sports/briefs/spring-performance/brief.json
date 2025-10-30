@@ -1,0 +1,46 @@
+{
+  "campaign": "winners-spring-performance-2025",
+  "target_region": "North America",
+  "target_audience": "Active adults aged 18-45, fitness enthusiasts, amateur and professional athletes seeking high-performance sports gear",
+  "locales": [
+    "en-US",
+    "en-CA",
+    "es-MX"
+  ],
+  "message": {
+    "en-US": "Unleash Your Power This Spring - Performance Gear for Champions",
+    "en-CA": "Unlock Your Potential - Elite Performance for Every Athlete",
+    "es-MX": "Libera Tu Poder Esta Primavera - Equipo de Alto Rendimiento"
+  },
+  "cta": {
+    "en-US": "Shop Performance",
+    "en-CA": "Shop Now",
+    "es-MX": "Comprar Ahora"
+  },
+  "products": [
+    {
+      "id": "cross-trainer-sneakers",
+      "name": "Cross Trainer Sneakers",
+      "prompt": "premium cross trainer sneakers in Winners black with electric blue accents, multi-surface sole, presented on gym flooring with kettlebells in background, performance footwear styling, professional product lighting with subtle motion blur, Winners lightning bolt logo on tongue",
+      "negative_prompt": "casual street shoes, muddy or worn sneakers, plain white background, sandals, low resolution",
+      "image_path": "placeholder - will be set during upload"
+    },
+    {
+      "id": "all-weather-performance-hoodie",
+      "name": "All-Weather Performance Hoodie",
+      "prompt": "athlete wearing a fitted performance hoodie in charcoal with electric blue Winners accents, breathable tech fabric, thumb holes and zip pockets visible, outdoor training scene at dawn with light mist, dynamic sports photography, hood up, Winners logo on chest",
+      "negative_prompt": "baggy cotton hoodie, lifestyle fashion shoot, studio backdrop, bright neon colors, wrinkled fabric",
+      "image_path": "placeholder - will be set during upload"
+    }
+  ],
+  "brand": {
+    "primary_hex": "#000000",
+    "logo_path": "/brandlib/winners/winners.png"
+  },
+  "aspect_ratios": [
+    "1:1",
+    "9:16",
+    "16:9"
+  ],
+  "template": "bottom-cta@1.3.0"
+}
