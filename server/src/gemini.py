@@ -45,6 +45,8 @@ class GeminiClient:
         aspect_ratio: str | None = None,
         mime_type: str = "image/png",
         model: str | None = None,
+        reference_image_bytes: bytes | None = None,
+        reference_image_mime: str = "image/png",
     ) -> GeminiImageArtifact:
         target_model = model or DEFAULT_GEMINI_MODEL
 
@@ -53,10 +55,26 @@ class GeminiClient:
         if negative_prompt:
             prompt_text = f"{prompt}\n\nNegative prompt: {negative_prompt}"
 
+        # Build parts array with optional reference image
+        parts: list[dict[str, Any]] = []
+
+        # Add reference image first if provided (for visual context)
+        if reference_image_bytes:
+            image_b64 = base64.b64encode(reference_image_bytes).decode("utf-8")
+            parts.append({
+                "inlineData": {
+                    "mimeType": reference_image_mime,
+                    "data": image_b64
+                }
+            })
+
+        # Add text prompt
+        parts.append({"text": prompt_text})
+
         contents: list[dict[str, Any]] = [
             {
                 "role": "user",
-                "parts": [{"text": prompt_text}],
+                "parts": parts,
             }
         ]
 

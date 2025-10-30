@@ -85,11 +85,26 @@
         </div>
     </div>
 
+    <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content bg-dark">
+                <div class="modal-header border-0 pb-0">
+                    <h2 class="modal-title h6 text-white" id="imageModalTitle">Product Image</h2>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center p-4">
+                    <img id="imageModalImg" src="" alt="Product image" class="img-fluid rounded" style="max-height: 80vh;">
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="/static/js/bootstrap.bundle.min.js"></script>
 
     <script>
         let briefs = [];
         let briefModal;
+        let imageModal;
 
         const statusStyles = {
             pending: 'badge bg-warning-subtle text-warning-emphasis status-badge',
@@ -131,13 +146,30 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const bootstrapGlobal = window.bootstrap;
-            const modalElement = document.getElementById('briefModal');
-            if (bootstrapGlobal && modalElement) {
-                briefModal = new bootstrapGlobal.Modal(modalElement);
+            const briefModalElement = document.getElementById('briefModal');
+            const imageModalElement = document.getElementById('imageModal');
+
+            if (bootstrapGlobal && briefModalElement) {
+                briefModal = new bootstrapGlobal.Modal(briefModalElement);
             }
+            if (bootstrapGlobal && imageModalElement) {
+                imageModal = new bootstrapGlobal.Modal(imageModalElement);
+            }
+
             loadBriefs();
             setInterval(loadBriefs, 30000);
         });
+
+        function showImageModal(imageSrc, imageTitle = 'Product Image') {
+            const imgElement = document.getElementById('imageModalImg');
+            const titleElement = document.getElementById('imageModalTitle');
+
+            if (imgElement && titleElement && imageModal) {
+                imgElement.src = imageSrc;
+                titleElement.textContent = imageTitle;
+                imageModal.show();
+            }
+        }
 
         async function loadBriefs() {
             toggleVisibility('errorAlert', false);
@@ -158,18 +190,18 @@
                 } else {
                     toggleVisibility('emptyState', false);
                     toggleVisibility('briefsGrid', true);
-                    renderBriefs();
+                    await renderBriefs();
                 }
             } catch (error) {
                 showError(`Error loading briefs: ${error.message}`);
             }
         }
 
-        function renderBriefs() {
+        async function renderBriefs() {
             const grid = document.getElementById('briefsGrid');
             grid.innerHTML = '';
 
-            briefs.forEach(brief => {
+            for (const brief of briefs) {
                 const col = document.createElement('div');
                 col.className = 'col-12 col-md-6 col-lg-4';
 
@@ -181,38 +213,69 @@
                     minute: '2-digit'
                 });
 
+                // Fetch temporary links for product images
+                const imageLinks = await Promise.all(
+                    (brief.product_image_paths || []).map(path => getTemporaryLink(path))
+                );
+                const validImageLinks = imageLinks.filter(link => link !== null);
+
+                const productImagesHtml = validImageLinks.length > 0
+                    ? `
+                        <div class="d-flex gap-2 mb-3">
+                            ${validImageLinks.map((link, idx) => `
+                                <div class="ratio ratio-1x1 rounded border bg-white shadow-sm overflow-hidden" style="width: 80px; cursor: pointer;" title="Double-click to view full size">
+                                    <img src="${escapeHtml(link)}" alt="Product preview" class="object-fit-cover w-100 h-100 product-preview-img" loading="lazy" data-image-src="${escapeHtml(link)}" data-image-title="Product ${idx + 1}">
+                                </div>
+                            `).join('')}
+                        </div>
+                    `
+                    : '';
+
                 col.innerHTML = `
                     <div class="card h-100 shadow-sm border-0">
                         <div class="card-body d-flex flex-column">
                             <div class="d-flex justify-content-between align-items-start mb-3">
                                 <div>
-                                    <h3 class="h5 mb-1 text-primary">${brief.campaign_id}</h3>
-                                    <p class="text-secondary small mb-0">${brief.target_region}</p>
+                                    <h3 class="h5 mb-1 text-primary">${escapeHtml(brief.campaign_id)}</h3>
+                                    <p class="text-secondary small mb-0">${escapeHtml(brief.target_region)}</p>
                                 </div>
                                 <span class="${statusStyles[brief.status] || 'badge bg-secondary'}">${brief.status}</span>
                             </div>
+                            ${productImagesHtml}
                             <dl class="row g-2 small text-secondary mb-3 flex-grow-1">
                                 <dt class="col-6">Products</dt>
                                 <dd class="col-6 text-end mb-0">${brief.product_count}</dd>
                                 <dt class="col-6">Locales</dt>
                                 <dd class="col-6 text-end mb-0">${brief.locale_count}</dd>
                                 <dt class="col-6">Audience</dt>
-                                <dd class="col-6 text-end mb-0">${brief.target_audience}</dd>
+                                <dd class="col-6 text-end mb-0">${escapeHtml(brief.target_audience)}</dd>
                                 <dt class="col-6">Uploaded</dt>
                                 <dd class="col-6 text-end mb-0">${uploadDate}</dd>
                             </dl>
-                            <button type="button" class="btn btn-outline-primary w-100 mt-auto" data-campaign="${brief.campaign_id}">View details</button>
+                            <button type="button" class="btn btn-outline-primary w-100 mt-auto" data-campaign="${escapeHtml(brief.campaign_id)}">View details</button>
                         </div>
                     </div>
                 `;
 
                 grid.appendChild(col);
-            });
+            }
 
+            // Add click handlers for "View details" buttons
             grid.querySelectorAll('button[data-campaign]').forEach(button => {
                 button.addEventListener('click', (event) => {
                     const campaignId = event.currentTarget.getAttribute('data-campaign');
                     showBriefDetail(campaignId);
+                });
+            });
+
+            // Add double-click handlers for product preview images
+            grid.querySelectorAll('.product-preview-img').forEach(img => {
+                img.addEventListener('dblclick', (event) => {
+                    const imgSrc = event.currentTarget.getAttribute('data-image-src');
+                    const imgTitle = event.currentTarget.getAttribute('data-image-title');
+                    if (imgSrc) {
+                        showImageModal(imgSrc, imgTitle);
+                    }
                 });
             });
         }
@@ -250,8 +313,8 @@
                         const caption = name && id ? `${name} (${id})` : label;
                         return `
                             <figure class="mb-0 text-center">
-                                <div class="ratio ratio-1x1 rounded border bg-white shadow-sm overflow-hidden" style="width: 140px;">
-                                    <img src="${escapeHtml(tempLink)}" alt="${escapeHtml(label)} image" class="object-fit-cover w-100 h-100" loading="lazy">
+                                <div class="ratio ratio-1x1 rounded border bg-white shadow-sm overflow-hidden" style="width: 140px; cursor: pointer;" title="Double-click to view full size">
+                                    <img src="${escapeHtml(tempLink)}" alt="${escapeHtml(label)} image" class="object-fit-cover w-100 h-100 product-detail-img" loading="lazy" data-image-src="${escapeHtml(tempLink)}" data-image-title="${escapeHtml(label)}">
                                 </div>
                                 <figcaption class="small text-secondary mt-2 text-truncate" title="${escapeHtml(caption)}">${escapeHtml(label)}</figcaption>
                             </figure>
@@ -278,7 +341,7 @@
                     ? `
                         <div class="ms-auto d-flex flex-column align-items-start">
                             <div class="small text-secondary">Logo</div>
-                            <img src="${escapeHtml(logoTempLink)}" alt="Brand logo" class="rounded border bg-white shadow-sm" style="max-height: 64px; width: auto;" loading="lazy">
+                            <img src="${escapeHtml(logoTempLink)}" alt="Brand logo" class="rounded border bg-white shadow-sm brand-logo-img" style="max-height: 64px; width: auto; cursor: pointer;" loading="lazy" data-image-src="${escapeHtml(logoTempLink)}" data-image-title="Brand Logo" title="Double-click to view full size">
                         </div>
                     `
                     : '';
@@ -345,6 +408,30 @@
                 `;
 
                 document.getElementById('modalBody').innerHTML = modalBody;
+
+                // Add double-click handlers for product detail images
+                document.querySelectorAll('.product-detail-img').forEach(img => {
+                    img.addEventListener('dblclick', (event) => {
+                        const imgSrc = event.currentTarget.getAttribute('data-image-src');
+                        const imgTitle = event.currentTarget.getAttribute('data-image-title');
+                        if (imgSrc) {
+                            showImageModal(imgSrc, imgTitle);
+                        }
+                    });
+                });
+
+                // Add double-click handler for brand logo
+                const brandLogoImg = document.querySelector('.brand-logo-img');
+                if (brandLogoImg) {
+                    brandLogoImg.addEventListener('dblclick', (event) => {
+                        const imgSrc = event.currentTarget.getAttribute('data-image-src');
+                        const imgTitle = event.currentTarget.getAttribute('data-image-title');
+                        if (imgSrc) {
+                            showImageModal(imgSrc, imgTitle);
+                        }
+                    });
+                }
+
                 if (briefModal) {
                     briefModal.show();
                 } else {

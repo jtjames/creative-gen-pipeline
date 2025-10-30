@@ -60,9 +60,16 @@ class OpenAIImageClient:
         size: str | None = None,
         model: str | None = None,
         mime_type: str = _DEFAULT_MIME_TYPE,
+        reference_image_bytes: bytes | None = None,
+        reference_image_mime: str = "image/png",
     ) -> OpenAIImageArtifact:
         target_model = model or DEFAULT_OPENAI_IMAGE_MODEL
         prompt_text = prompt
+
+        # Note: DALL-E 3 doesn't support image-to-image conditioning
+        # If reference_image_bytes provided, we rely on text-based brand characteristics
+        # which should already be in the prompt via logo analysis
+
         if negative_prompt:
             prompt_text = f"{prompt}\n\nNegative prompt: {negative_prompt}"
 

@@ -1,0 +1,46 @@
+{
+  "campaign": "vitality-nutrition-spring-2025",
+  "target_region": "North America",
+  "target_audience": "Health-conscious individuals aged 25-45, fitness enthusiasts, and wellness seekers",
+  "locales": ["en-US", "es-MX", "fr-CA"],
+  "message": {
+    "en-US": "Fuel Your Vitality",
+    "es-MX": "Alimenta Tu Vitalidad",
+    "fr-CA": "Alimentez Votre Vitalité"
+  },
+  "cta": {
+    "en-US": "Shop Now",
+    "es-MX": "Comprar Ahora",
+    "fr-CA": "Acheter Maintenant"
+  },
+  "products": [
+    {
+      "id": "omega-3-premium",
+      "name": "Omega-3 Premium Capsules",
+      "prompt": "Premium omega-3 fish oil supplement bottle with soft gel capsules visible through clear container, sleek modern packaging design, professional product photography on white background, studio lighting, high-end wellness product aesthetic",
+      "negative_prompt": "blurry, low quality, distorted, watermark, text overlay, cluttered background, amateur photography",
+      "image_path": "pending-generation"
+    },
+    {
+      "id": "plant-protein-vanilla",
+      "name": "Plant Protein Powder - Vanilla",
+      "prompt": "Premium plant-based protein powder container with vanilla flavor, modern minimalist packaging design, large resealable tub with scoop visible, professional studio photography on clean white background, premium wellness brand aesthetic",
+      "negative_prompt": "blurry, low resolution, distorted, watermark, busy background, cheap looking, pixelated",
+      "image_path": "pending-generation"
+    },
+    {
+      "id": "energy-bar-chocolate",
+      "name": "Vitality Energy Bar - Dark Chocolate",
+      "prompt": "Premium nutrition energy bar with dark chocolate coating, partially unwrapped showing texture and layers, modern sleek wrapper design, professional food photography on white background, appetizing presentation, high-end health food product",
+      "negative_prompt": "blurry, unappetizing, messy, low quality, watermark, distorted, artificial looking, stock photo feel",
+      "image_path": "pending-generation"
+    }
+  ],
+  "brand": {
+    "primary_hex": "#50c878",
+    "secondary_hex": "#c850a0",
+    "logo_path": "placeholder"
+  },
+  "aspect_ratios": ["1:1", "9:16", "16:9"],
+  "template": "bottom-cta@1.3.0"
+}

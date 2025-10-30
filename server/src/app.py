@@ -6,7 +6,7 @@ from typing import List
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, status, UploadFile, File, Form, BackgroundTasks
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 import uvicorn
@@ -71,9 +71,181 @@ def create_app() -> FastAPI:
         return FileResponse(str(static_dir / "briefs.html"))
 
     @app.get("/health")
-    async def health():  # pragma: no cover - trivial route
+    async def health(storage: DropboxStorage = Depends(build_storage), settings: Settings = Depends(get_settings)):  # pragma: no cover - trivial route
         """Expose a lightweight liveness endpoint."""
-        return JSONResponse({"status": "ok"})
+        from datetime import datetime, timezone
+        import platform
+
+        # Gather system information
+        current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        python_version = platform.python_version()
+        system = platform.system()
+
+        # Check Dropbox connectivity
+        dropbox_status = "Connected"
+        try:
+            storage.ensure_folder("/briefs")
+            dropbox_status = "✅ Connected"
+        except Exception:
+            dropbox_status = "❌ Connection Failed"
+
+        # Check GenAI provider
+        genai_provider = settings.genai_provider or "Not configured"
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Health Check - Creative Automation</title>
+            <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+            <style>
+                :root {{
+                    --brand-primary: #4f46e5;
+                }}
+
+                body {{
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    min-height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                }}
+
+                .health-card {{
+                    background: white;
+                    border-radius: 1.5rem;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    max-width: 600px;
+                    width: 100%;
+                    overflow: hidden;
+                }}
+
+                .health-header {{
+                    background: linear-gradient(135deg, var(--brand-primary) 0%, #6366f1 100%);
+                    color: white;
+                    padding: 2rem;
+                    text-align: center;
+                }}
+
+                .health-header h1 {{
+                    font-size: 2rem;
+                    font-weight: 700;
+                    margin: 0 0 0.5rem 0;
+                }}
+
+                .status-badge {{
+                    display: inline-block;
+                    background: rgba(255,255,255,0.2);
+                    padding: 0.5rem 1.5rem;
+                    border-radius: 2rem;
+                    font-weight: 600;
+                    font-size: 1.125rem;
+                    backdrop-filter: blur(10px);
+                }}
+
+                .health-body {{
+                    padding: 2rem;
+                }}
+
+                .info-row {{
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 1rem 0;
+                    border-bottom: 1px solid #e5e7eb;
+                }}
+
+                .info-row:last-child {{
+                    border-bottom: none;
+                }}
+
+                .info-label {{
+                    color: #6b7280;
+                    font-weight: 500;
+                }}
+
+                .info-value {{
+                    color: #111827;
+                    font-weight: 600;
+                }}
+
+                .pulse {{
+                    animation: pulse 2s ease-in-out infinite;
+                }}
+
+                @keyframes pulse {{
+                    0%, 100% {{ opacity: 1; }}
+                    50% {{ opacity: 0.6; }}
+                }}
+
+                .footer-links {{
+                    background: #f9fafb;
+                    padding: 1.5rem 2rem;
+                    text-align: center;
+                }}
+
+                .footer-links a {{
+                    color: var(--brand-primary);
+                    text-decoration: none;
+                    margin: 0 1rem;
+                    font-weight: 500;
+                }}
+
+                .footer-links a:hover {{
+                    text-decoration: underline;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="health-card">
+                <div class="health-header">
+                    <h1>Creative Automation API</h1>
+                    <div class="status-badge pulse">
+                        ✅ System Operational
+                    </div>
+                </div>
+
+                <div class="health-body">
+                    <div class="info-row">
+                        <span class="info-label">Status</span>
+                        <span class="info-value">Healthy</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Timestamp</span>
+                        <span class="info-value">{current_time}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Python Version</span>
+                        <span class="info-value">{python_version}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Platform</span>
+                        <span class="info-value">{system}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Dropbox Storage</span>
+                        <span class="info-value">{dropbox_status}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">GenAI Provider</span>
+                        <span class="info-value">{genai_provider}</span>
+                    </div>
+                </div>
+
+                <div class="footer-links">
+                    <a href="/">Home</a>
+                    <a href="/briefs.html">View Briefs</a>
+                    <a href="/upload-brief.html">Upload Brief</a>
+                    <a href="/docs">API Docs</a>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        return HTMLResponse(content=html_content)
 
     @app.get("/storage/temporary-link")
     async def temporary_link(path: str, storage: DropboxStorage = Depends(build_storage)):

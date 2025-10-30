@@ -23,6 +23,8 @@ from .genai_providers import select_genai_client, GenAIClient
 from .config import Settings, get_settings
 from .assets import needs_generation
 from .generation_logs import GenerationLogService
+from .image_processing import overlay_logo_on_image
+from .logo_analysis import analyze_logo, create_logo_enhanced_prompt
 
 
 class OrchestratorAgent:
@@ -129,10 +131,38 @@ class OrchestratorAgent:
         Raises:
             RuntimeError: If image generation fails
         """
-        genai_client = select_genai_client(self.settings)
+        # Check if logo is available for image-to-image generation
+        has_logo = (
+            brief.brand
+            and brief.brand.logo_path
+            and not needs_generation(brief.brand.logo_path)
+        )
+
+        # Use Gemini for image-to-image when logo is present
+        # Gemini supports multimodal input (image + text), OpenAI DALL-E 3 does not
+        if has_logo:
+            from .gemini import GeminiClient
+            print("Logo detected - using Gemini for image-to-image generation")
+            genai_client = GeminiClient(self.settings)
+        else:
+            genai_client = select_genai_client(self.settings)
 
         campaign_folder = f"/briefs/{campaign_id}"
         assets_folder = f"{campaign_folder}/assets"
+
+        # Download and analyze logo if available
+        logo_bytes = None
+        logo_analysis = None
+        if brief.brand and brief.brand.logo_path and not needs_generation(brief.brand.logo_path):
+            try:
+                logo_bytes = self.storage.download_bytes(brief.brand.logo_path)
+                # Analyze logo to extract visual characteristics
+                logo_analysis = analyze_logo(logo_bytes)
+                print(f"Logo analysis: {logo_analysis['style_description']}")
+                print(f"Dominant colors: {[c for c, _ in logo_analysis['dominant_colors'][:3]]}")
+            except Exception as exc:
+                # Log warning but continue without logo
+                print(f"Warning: Could not download/analyze logo: {exc}")
 
         generated_count = 0
 
@@ -140,7 +170,7 @@ class OrchestratorAgent:
         for product in brief.products:
             if needs_generation(product.image_path):
                 await self._generate_product_image(
-                    campaign_id, genai_client, product, assets_folder
+                    campaign_id, genai_client, product, assets_folder, logo_bytes, brief, logo_analysis
                 )
                 generated_count += 1
 
@@ -160,6 +190,9 @@ class OrchestratorAgent:
         genai_client: GenAIClient,
         product: Product,
         assets_folder: str,
+        logo_bytes: bytes | None = None,
+        brief: CampaignBrief | None = None,
+        logo_analysis: dict | None = None,
     ) -> None:
         """
         Generate a single product image using GenAI.
@@ -169,18 +202,23 @@ class OrchestratorAgent:
             genai_client: Configured GenAI image client
             product: Product to generate image for
             assets_folder: Folder to store generated image
+            logo_bytes: Optional brand logo to overlay on the generated image
+            brief: Campaign brief containing brand information
+            logo_analysis: Analysis results from logo (colors, style, etc.)
 
         Raises:
             RuntimeError: If generation fails
         """
-        # Determine model name
-        model_name = getattr(genai_client, "DEFAULT_OPENAI_IMAGE_MODEL", "unknown")
-        if hasattr(genai_client, "_settings") and hasattr(genai_client._settings, "genai_provider"):
-            provider = genai_client._settings.genai_provider
-            if provider == "openai":
-                model_name = "dall-e-3"
-            elif provider == "gemini":
-                model_name = "gemini-2.0-flash-preview"
+        # Determine model name based on client type
+        from .gemini import GeminiClient
+        from .openai_image import OpenAIImageClient
+
+        if isinstance(genai_client, GeminiClient):
+            model_name = "gemini-2.0-flash-preview-image-generation"
+        elif isinstance(genai_client, OpenAIImageClient):
+            model_name = "dall-e-3"
+        else:
+            model_name = "unknown"
 
         try:
             # Log generation initiated
@@ -190,18 +228,79 @@ class OrchestratorAgent:
 
             start_time = time.time()
 
-            # Generate image using product prompt
+            # Enhance prompt with brand identity and logo analysis
+            enhanced_prompt = product.prompt
+
+            if logo_analysis:
+                # Use logo analysis to create highly detailed brand-aware prompt
+                # Pass has_reference_image=True since we're providing logo bytes to the model
+                enhanced_prompt = create_logo_enhanced_prompt(
+                    product.prompt,
+                    logo_analysis,
+                    has_reference_image=bool(logo_bytes)
+                )
+                print(f"Enhanced prompt for {product.id}: {enhanced_prompt[:150]}...")
+            elif brief and brief.brand:
+                # Fallback to basic brand information if logo analysis not available
+                brand_color = brief.brand.primary_hex
+                brand_context_parts = []
+
+                if brand_color:
+                    brand_context_parts.append(f"featuring brand color {brand_color}")
+
+                if logo_bytes:
+                    brand_context_parts.append(
+                        "with subtle brand elements or logo visible on the product itself, "
+                        "styled as an official branded product photograph"
+                    )
+
+                if brand_context_parts:
+                    brand_context = ", " + ", ".join(brand_context_parts)
+                    enhanced_prompt = f"{product.prompt}{brand_context}"
+
+            # Add call-to-action text to the image (English only for now)
+            if brief and brief.cta:
+                # Get English CTA (en-US) or first available CTA
+                cta_text = brief.cta.get("en-US") or next(iter(brief.cta.values()), None)
+                if cta_text:
+                    cta_instruction = (
+                        f". Include the call-to-action text '{cta_text}' prominently displayed "
+                        "in bold, modern typography at the bottom of the image with high contrast "
+                        "against the background for readability"
+                    )
+                    enhanced_prompt = f"{enhanced_prompt}{cta_instruction}"
+                    print(f"Including CTA in image: '{cta_text}'")
+
+            # Generate image using enhanced product prompt
+            # Pass logo as reference image for visual conditioning (Gemini supports this)
             artifact = await genai_client.generate_image(
-                prompt=product.prompt,
+                prompt=enhanced_prompt,
                 negative_prompt=product.negative_prompt,
                 aspect_ratio="1:1",  # Generate square master image
+                reference_image_bytes=logo_bytes,  # Logo as visual reference
             )
 
-            # Store generated image
+            # Composite logo on generated image if available
+            final_image_bytes = artifact.image_bytes
+            if logo_bytes:
+                try:
+                    final_image_bytes = overlay_logo_on_image(
+                        product_image_bytes=artifact.image_bytes,
+                        logo_image_bytes=logo_bytes,
+                        logo_position="bottom-right",
+                        logo_scale=0.15,  # 15% of image width
+                        padding=30,
+                    )
+                except Exception as logo_exc:
+                    # Log warning but use image without logo
+                    print(f"Warning: Could not overlay logo on {product.id}: {logo_exc}")
+                    final_image_bytes = artifact.image_bytes
+
+            # Store generated image (with or without logo)
             image_path = f"{assets_folder}/{product.id}-generated.png"
             self.storage.upload_image(
                 path=image_path,
-                data=artifact.image_bytes,
+                data=final_image_bytes,
             )
 
             # Update product image path

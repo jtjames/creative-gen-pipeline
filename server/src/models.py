@@ -122,3 +122,4 @@ class BriefListItem(BaseModel):
     status: str = Field(..., description="Processing status")
     product_count: int = Field(..., description="Number of products")
     locale_count: int = Field(..., description="Number of locales")
+    product_image_paths: List[str] = Field(default_factory=list, description="First 2 product image paths for preview")

@@ -224,6 +224,13 @@ class BriefService:
             metadata = self.get_brief_metadata(campaign_id)
 
             if brief and metadata:
+                # Get first 2 product images for preview
+                product_image_paths = [
+                    product.image_path
+                    for product in brief.products
+                    if not needs_generation(product.image_path)
+                ][:2]
+
                 brief_items.append(
                     BriefListItem(
                         campaign_id=campaign_id,
@@ -233,6 +240,7 @@ class BriefService:
                         status=metadata.status,
                         product_count=len(brief.products),
                         locale_count=len(brief.locales),
+                        product_image_paths=product_image_paths,
                     )
                 )
 
