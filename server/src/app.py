@@ -390,7 +390,28 @@ def create_app() -> FastAPI:
         """
         try:
             briefs = brief_service.list_briefs()
-            return briefs
+            # Convert to dict format for JSONResponse
+            briefs_data = [
+                {
+                    "campaign_id": b.campaign_id,
+                    "target_region": b.target_region,
+                    "target_audience": b.target_audience,
+                    "uploaded_at": b.uploaded_at.isoformat(),
+                    "status": b.status,
+                    "product_count": b.product_count,
+                    "locale_count": b.locale_count,
+                    "product_image_paths": b.product_image_paths,
+                }
+                for b in briefs
+            ]
+            return JSONResponse(
+                content=briefs_data,
+                headers={
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0"
+                }
+            )
         except RuntimeError as exc:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
